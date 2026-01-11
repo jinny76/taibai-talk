@@ -559,18 +559,70 @@ def generate_cli_qrcode(url):
     qrcode_terminal.draw(url)
 
 
+# if __name__ == '__main__':
+#     local_ip = get_local_ip()
+#     port = 5000
+#     access_url = f"http://{local_ip}:{port}"
+#     # 新增：生成并输出终端二维码
+#     generate_cli_qrcode(access_url)
+#     print(f"\n服务器已启动！")
+#     print(f"手机访问地址（或扫描上面的二维码）：{access_url}")
+#     print(f"已加载 {len(REPLACE_RULES)} 条替换规则")
+#     print(f"注意：手机和电脑需在同一局域网下")
+#     print(f"当前版本v0.0.5，项目地址：https://github.com/ChaserSu/DBInputSync")
+#     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+
+import requests
+import json
+import time
+
 if __name__ == '__main__':
     local_ip = get_local_ip()
     port = 5000
     access_url = f"http://{local_ip}:{port}"
-    # 新增：生成并输出终端二维码
+    CURRENT_VERSION = "0.0.6"
+    GITHUB_REPO = "ChaserSu/DBInputSync"  # GitHub 用户名/仓库名
+    
+    # 生成并输出终端二维码
     generate_cli_qrcode(access_url)
     print(f"\n服务器已启动！")
     print(f"手机访问地址（或扫描上面的二维码）：{access_url}")
     print(f"已加载 {len(REPLACE_RULES)} 条替换规则")
     print(f"注意：手机和电脑需在同一局域网下")
-    print(f"当前版本v0.0.5，项目地址：https://github.com/ChaserSu/DBInputSync")
+    print(f"当前版本 v{CURRENT_VERSION}，项目地址：https://github.com/{GITHUB_REPO}")
+        # 新增：自动检查更新（非阻塞，超时3秒）
+    print("正在检查更新...")
+    try:
+        # 调用 GitHub API 获取最新发布版本
+        response = requests.get(
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+            timeout=3,
+            headers={"User-Agent": "DBInputSync-Client"}
+        )
+        if response.status_code == 200:
+            latest_data = response.json()
+            latest_version = latest_data.get("tag_name", "").lstrip('v')  # 去除版本号前缀的 'v'
+            
+            # 版本号对比（简单数字对比，适用于 x.y.z 格式）
+            def version_to_tuple(version_str):
+                return tuple(map(int, version_str.split('.')))
+            
+            current_tuple = version_to_tuple(CURRENT_VERSION)
+            latest_tuple = version_to_tuple(latest_version)
+            
+            if latest_tuple > current_tuple:
+                print(f"\n🎉 发现新版本！当前版本 v{CURRENT_VERSION} → 最新版本 v{latest_version}")
+                print(f"📥 下载地址：{latest_data.get('html_url', f'https://github.com/{GITHUB_REPO}/releases')}")
+                print(f"📝 更新日志：{latest_data.get('body', '请前往 GitHub 查看详细更新日志')[:200]}...\n")
+            else:
+                print("✅ 当前已是最新版本！\n")
+        else:
+            print("⚠️  更新检查失败：无法获取最新版本信息\n")
+    except requests.exceptions.RequestException as e:
+        # 网络错误/超时，不影响主程序
+        print(f"⚠️  更新检查失败：{str(e)}（忽略，继续运行）\n")
+    
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
 
 
     
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
