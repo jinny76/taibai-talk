@@ -23,8 +23,9 @@
 - 手机：安卓/iOS（安装豆包输入法和浏览器）
 - 手机与电脑**连接同一Wi-Fi/局域网**
 
-<img width="750" height="578" alt="image" src="https://github.com/user-attachments/assets/c257076a-344f-4900-93bc-6495198221e4" />
-<img width="781" height="702" alt="image" src="https://github.com/user-attachments/assets/5ba8c4c1-20c2-4054-8363-d652cfffa756" />
+<img width="678" height="808" alt="image" src="https://github.com/user-attachments/assets/18eb83f1-23b6-41ff-b2b9-95b11dd4e996" />
+<img width="627" height="702" alt="image" src="https://github.com/user-attachments/assets/33fbfcd3-3134-495d-9cc8-54c1ebd442c1" />
+
 
 ### 软件依赖
 ```bash
@@ -91,7 +92,7 @@ v0.0.4 添加了更多功能
 - 服务启动后可以直接扫码
 - 新增弹出键盘功能
 - 删除手机和平板模式，改为布局选项
-<img width="678" height="808" alt="image" src="https://github.com/user-attachments/assets/18eb83f1-23b6-41ff-b2b9-95b11dd4e996" />
+
 
 v0.0.3 添加了更多功能
 - 对平板和手机设备做出区分，也可以手动调节。
