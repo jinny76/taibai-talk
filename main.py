@@ -551,36 +551,26 @@ def get_local_ip():
     return local_ip
 
 # 新增：生成终端二维码函数
+# def generate_cli_qrcode(url):
+#     qr_main(['--factory', 'qrcode.terminal.Basic', url])
+
+import qrcode_terminal
 def generate_cli_qrcode(url):
-    """在命令行输出字符画二维码"""
-    try:
-        # 调用 qrcode 库的终端生成逻辑
-        qr_main(['--factory', 'qrcode.terminal.SixteenColor', url])
-    except Exception as e:
-        # 降级方案：使用简单字符二维码
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=1,
-            border=1,
-        )
-        qr.add_data(url)
-        qr.make(fit=True)
-        qr.print_ascii(invert=True)
+    qrcode_terminal.draw(url)
+
 
 if __name__ == '__main__':
     local_ip = get_local_ip()
     port = 5000
     access_url = f"http://{local_ip}:{port}"
-    print(f"\n项目地址：https://github.com/ChaserSu/DBInputSync")
-    print(f"\n服务器已启动！")
-    print(f"手机访问地址：{access_url}")
-    print(f"已加载 {len(REPLACE_RULES)} 条替换规则")
-    print(f"注意：手机和电脑需在同一局域网下\n")
-    
     # 新增：生成并输出终端二维码
-    print("扫码访问（手机摄像头扫描下方二维码）：")
     generate_cli_qrcode(access_url)
-    print()
+    print(f"\n服务器已启动！")
+    print(f"手机访问地址（或扫描上面的二维码）：{access_url}")
+    print(f"已加载 {len(REPLACE_RULES)} 条替换规则")
+    print(f"注意：手机和电脑需在同一局域网下")
+    print(f"当前版本v0.0.5，项目地址：https://github.com/ChaserSu/DBInputSync")
+
+
     
     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
