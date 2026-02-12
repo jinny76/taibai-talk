@@ -1,0 +1,67 @@
+# Claude Code 常用命令和热键
+# 每行一个命令，#开头为注释
+# [KEY] 前缀表示热键，会直接发送按键而非文本
+
+# === 斜杠命令 ===
+/help
+/clear
+/compact
+/config
+/cost
+/doctor
+/init
+/memory
+/model
+/permissions
+/review
+/commit
+/pr-comments
+/terminal-setup
+/vim
+/mcp
+/add-dir
+/bug
+/think
+
+# === 终端热键 ===
+[KEY]Ctrl+C
+[KEY]Ctrl+D
+[KEY]Ctrl+Z
+[KEY]Ctrl+L
+[KEY]Ctrl+A
+[KEY]Ctrl+E
+[KEY]Ctrl+U
+[KEY]Ctrl+K
+[KEY]Ctrl+W
+[KEY]Ctrl+R
+
+# === VS Code 热键 ===
+[KEY]Ctrl+`
+[KEY]Ctrl+Shift+`
+[KEY]Ctrl+1
+[KEY]Ctrl+2
+[KEY]Ctrl+Tab
+[KEY]Ctrl+Shift+P
+[KEY]Ctrl+P
+[KEY]Ctrl+B
+[KEY]Ctrl+J
+
+# === 方向键 ===
+[KEY]Up
+[KEY]Down
+[KEY]Left
+[KEY]Right
+[KEY]Home
+[KEY]End
+[KEY]PageUp
+[KEY]PageDown
+
+# === 常用操作 ===
+cd ..
+ls -la
+git status
+git diff
+git log --oneline -10
+npm run dev
+npm run build
+python main.py
