@@ -1280,32 +1280,14 @@ def generate_cli_qrcode(url):
     qrcode_terminal.draw(url)
 
 
-# if __name__ == '__main__':
-#     local_ip = get_local_ip()
-#     port = 5000
-#     access_url = f"http://{local_ip}:{port}"
-#     # 新增：生成并输出终端二维码
-#     generate_cli_qrcode(access_url)
-#     print(f"\n服务器已启动！")
-#     print(f"手机访问地址（或扫描上面的二维码）：{access_url}")
-#     print(f"已加载 {len(REPLACE_RULES)} 条替换规则")
-#     print(f"注意：手机和电脑需在同一局域网下")
-#     print(f"当前版本v0.0.5，项目地址：https://github.com/ChaserSu/DBInputSync")
-#     app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-
-import requests
-import json
-import time
-
 if __name__ == '__main__':
     # 命令行参数解析
-    parser = argparse.ArgumentParser(description='DBInputSync - 手机输入同步到电脑')
+    parser = argparse.ArgumentParser(description='太白说 - 手机输入同步到电脑')
     parser.add_argument('-p', '--port', type=int, default=5000, help='服务端口号 (默认: 5000)')
     parser.add_argument('--host', type=str, default='0.0.0.0', help='监听地址 (默认: 0.0.0.0)')
     parser.add_argument('--url', type=str, default=None, help='外部访问地址 (用于反向代理，如: https://example.com)')
     parser.add_argument('--password', type=str, default=None, help='访问密码 (不设置则无需验证)')
     parser.add_argument('--no-qrcode', action='store_true', help='不显示二维码')
-    parser.add_argument('--no-update-check', action='store_true', help='跳过更新检查')
     args = parser.parse_args()
 
     # 设置密码
@@ -1318,9 +1300,7 @@ if __name__ == '__main__':
         access_url = args.url.rstrip('/')  # 移除末尾斜杠
     else:
         access_url = f"http://{local_ip}:{port}"
-    CURRENT_VERSION = "0.0.6"
-    GITHUB_REPO = "ChaserSu/DBInputSync"  # GitHub 用户名/仓库名
-    
+
     # 生成并输出终端二维码
     if not args.no_qrcode:
         generate_cli_qrcode(access_url)
@@ -1335,42 +1315,5 @@ if __name__ == '__main__':
         print(f"使用外部地址模式（反向代理）")
     else:
         print(f"注意：手机和电脑需在同一局域网下")
-    print(f"当前版本 v{CURRENT_VERSION}，项目地址：https://github.com/{GITHUB_REPO}")
-
-    # 自动检查更新（非阻塞，超时3秒）
-    if not args.no_update_check:
-        print("正在检查更新...")
-        try:
-            # 调用 GitHub API 获取最新发布版本
-            response = requests.get(
-                f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
-                timeout=3,
-                headers={"User-Agent": "DBInputSync-Client"}
-            )
-            if response.status_code == 200:
-                latest_data = response.json()
-                latest_version = latest_data.get("tag_name", "").lstrip('v')  # 去除版本号前缀的 'v'
-
-                # 版本号对比（简单数字对比，适用于 x.y.z 格式）
-                def version_to_tuple(version_str):
-                    return tuple(map(int, version_str.split('.')))
-
-                current_tuple = version_to_tuple(CURRENT_VERSION)
-                latest_tuple = version_to_tuple(latest_version)
-
-                if latest_tuple > current_tuple:
-                    print(f"\n发现新版本！当前版本 v{CURRENT_VERSION} -> 最新版本 v{latest_version}")
-                    print(f"下载地址：{latest_data.get('html_url', f'https://github.com/{GITHUB_REPO}/releases')}")
-                    print(f"更新日志：{latest_data.get('body', '请前往 GitHub 查看详细更新日志')[:200]}...\n")
-                else:
-                    print("当前已是最新版本！\n")
-            else:
-                print("更新检查失败：无法获取最新版本信息\n")
-        except requests.exceptions.RequestException as e:
-            # 网络错误/超时，不影响主程序
-            print(f"更新检查失败：{str(e)}（忽略，继续运行）\n")
 
     app.run(host=args.host, port=port, debug=False, threaded=True)
-
-
-    
