@@ -808,22 +808,6 @@
         <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
     </div>
 
-    <div class="auto-send-bar">
-        <label>
-            <span class="toggle-switch">
-                <input type="checkbox" id="auto-send-toggle">
-                <span class="toggle-slider"></span>
-            </span>
-            自动发送
-        </label>
-        <select class="delay-select" id="delay-select">
-            <option value="1000">1秒</option>
-            <option value="2000">2秒</option>
-            <option value="3000" selected>3秒</option>
-            <option value="5000">5秒</option>
-        </select>
-    </div>
-
     <!-- 全屏触控板覆盖层 -->
     <div id="touchpad-area">
         <div id="touchpad"></div>
@@ -883,6 +867,16 @@
                 <button class="btn btn-symbol" onclick="openSymbolModal('【】')">【】</button>
                 <button class="btn btn-symbol" onclick="openSymbolModal('{}')">{ }</button>
                 <button class="btn btn-symbol" onclick="openSymbolModal('[]')">[ ]</button>
+            </div>
+        </div>
+
+        <div class="btn-section">
+            <div class="section-label">快捷操作</div>
+            <div class="btn-row">
+                <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
+                <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
+                <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
+                <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
             </div>
         </div>
 
@@ -1113,8 +1107,9 @@
         touchpad.addEventListener('mouseup', handleTouchEnd);
         touchpad.addEventListener('mouseleave', handleTouchEnd);
 
-        const autoSendToggle = document.getElementById('auto-send-toggle');
-        const delaySelect = document.getElementById('delay-select');
+        // 自动发送：使用变量控制，从 localStorage 加载
+        let autoSendEnabled = localStorage.getItem('taibai_auto_send') === '1';
+        let autoSendDelay = parseInt(localStorage.getItem('taibai_auto_delay')) || 3000;
         const countdownEl = document.getElementById('countdown');
         const MAX_HISTORY = 20;
 
@@ -1359,11 +1354,11 @@
         refreshHistoryMenu();
 
         function getDelay() {
-            return parseInt(delaySelect.value);
+            return autoSendDelay;
         }
 
         function startAutoSendTimer() {
-            if (!autoSendToggle.checked) return;
+            if (!autoSendEnabled) return;
             const text = document.getElementById('input-box').value.trim();
             if (!text) return;
 
@@ -1449,6 +1444,16 @@
                 updateStatus('disconnected');
                 alert('发送失败，请检查连接');
             });
+        }
+
+        function quickSend(text) {
+            // 快速发送指定文本并回车
+            fetch('/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            }).then(() => fetch('/send_enter', { method: 'POST' }))
+                .then(() => { hasHistory = true; });
         }
 
         function sendEnter() {
@@ -1588,9 +1593,9 @@
 
         function showSettings() {
             logoMenu.classList.remove('show');
-            // 加载当前设置
-            settingsAutoSend.checked = autoSendToggle.checked;
-            settingsDelay.value = delaySelect.value;
+            // 同步当前设置到弹窗
+            settingsAutoSend.checked = autoSendEnabled;
+            settingsDelay.value = autoSendDelay;
             // 加载命令和常用语（从服务器获取最新）
             fetch('/get_options').then(r => r.json()).then(data => {
                 settingsCommands.value = data.commands.join('\n');
@@ -1604,11 +1609,12 @@
         }
 
         function saveSettings() {
-            // 保存自动发送设置到本地
-            autoSendToggle.checked = settingsAutoSend.checked;
-            delaySelect.value = settingsDelay.value;
-            localStorage.setItem('taibai_auto_send', settingsAutoSend.checked ? '1' : '0');
-            localStorage.setItem('taibai_auto_delay', settingsDelay.value);
+            // 更新变量
+            autoSendEnabled = settingsAutoSend.checked;
+            autoSendDelay = parseInt(settingsDelay.value);
+            // 保存到 localStorage
+            localStorage.setItem('taibai_auto_send', autoSendEnabled ? '1' : '0');
+            localStorage.setItem('taibai_auto_delay', autoSendDelay);
 
             // 保存命令和常用语到服务器
             const commands = settingsCommands.value.split('\n').filter(l => l.trim());
@@ -1647,24 +1653,6 @@
         });
 
         document.getElementById('input-box').addEventListener('input', startAutoSendTimer);
-        autoSendToggle.addEventListener('change', function () {
-            localStorage.setItem('taibai_auto_send', this.checked ? '1' : '0');
-            clearAutoSendTimer();
-        });
-        delaySelect.addEventListener('change', function () {
-            localStorage.setItem('taibai_auto_delay', this.value);
-        });
-
-        (function loadSettings() {
-            const savedAutoSend = localStorage.getItem('taibai_auto_send');
-            const savedDelay = localStorage.getItem('taibai_auto_delay');
-            if (savedAutoSend === '1') {
-                autoSendToggle.checked = true;
-            }
-            if (savedDelay) {
-                delaySelect.value = savedDelay;
-            }
-        })();
 
         // ===== 自动聚焦 =====
         let autoFocusTimer = null;
