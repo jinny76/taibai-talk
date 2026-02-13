@@ -238,9 +238,22 @@ HTML_TEMPLATE = '''
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        #mode-btn:hover {
+        #mode-btn:hover, #fullscreen-btn:hover {
             border-color: var(--gold-primary);
             color: var(--gold-primary);
+        }
+        #fullscreen-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-left: 8px;
         }
         .auto-send-bar {
             width: 100%;
@@ -573,6 +586,7 @@ HTML_TEMPLATE = '''
             <span class="countdown-indicator" id="countdown">3s</span>
         </div>
         <button id="mode-btn" onclick="toggleMode()">放大</button>
+        <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
     </div>
 
     <div class="auto-send-bar">
@@ -596,10 +610,13 @@ HTML_TEMPLATE = '''
 
         <div class="quick-selects">
             <select class="quick-select" id="cmd-select" onchange="insertOption(this)">
-                <option value="">命令</option>
+                <option value="">⚡</option>
             </select>
             <select class="quick-select" id="phrase-select" onchange="insertOption(this)">
-                <option value="">常用语</option>
+                <option value="">💬</option>
+            </select>
+            <select class="quick-select" id="history-select" onchange="selectHistory(this)">
+                <option value="">🕐</option>
             </select>
             <button class="btn-enter-inline" onclick="sendEnter()">回车</button>
         </div>
@@ -663,6 +680,48 @@ HTML_TEMPLATE = '''
         const countdownEl = document.getElementById('countdown');
         const cmdSelect = document.getElementById('cmd-select');
         const phraseSelect = document.getElementById('phrase-select');
+        const historySelect = document.getElementById('history-select');
+        const MAX_HISTORY = 20; // 最多保存20条历史
+
+        // 历史记录相关
+        function getHistory() {
+            return JSON.parse(localStorage.getItem('taibai_history') || '[]');
+        }
+
+        function addToHistory(text) {
+            if (!text.trim()) return;
+            let history = getHistory();
+            // 移除重复项
+            history = history.filter(h => h !== text);
+            // 添加到开头
+            history.unshift(text);
+            // 限制数量
+            if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+            localStorage.setItem('taibai_history', JSON.stringify(history));
+            refreshHistorySelect();
+        }
+
+        function refreshHistorySelect() {
+            while (historySelect.options.length > 1) historySelect.remove(1);
+            getHistory().forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.textContent = item.length > 12 ? item.substring(0, 12) + '...' : item;
+                historySelect.appendChild(opt);
+            });
+        }
+
+        function selectHistory(selectEl) {
+            const val = selectEl.value;
+            if (val) {
+                document.getElementById('input-box').value = val;
+                selectEl.selectedIndex = 0;
+                document.getElementById('input-box').focus();
+            }
+        }
+
+        // 页面加载时初始化历史下拉框
+        refreshHistorySelect();
 
         // 获取使用频率数据
         function getUsageCount(key) {
@@ -688,23 +747,37 @@ HTML_TEMPLATE = '''
             return text.length > 15 ? text.substring(0, 15) + '...' : text;
         }
 
+        // 缓存原始数据
+        let cachedCommands = [];
+        let cachedPhrases = [];
+
+        // 刷新下拉框选项（按使用频率排序）
+        function refreshSelectOptions() {
+            // 清空现有选项（保留第一个占位项）
+            while (cmdSelect.options.length > 1) cmdSelect.remove(1);
+            while (phraseSelect.options.length > 1) phraseSelect.remove(1);
+
+            // 按使用频率排序后重新填充
+            sortByUsage(cachedCommands).forEach(cmd => {
+                const opt = document.createElement('option');
+                opt.value = cmd;
+                opt.textContent = getDisplayText(cmd);
+                cmdSelect.appendChild(opt);
+            });
+            sortByUsage(cachedPhrases).forEach(phrase => {
+                const opt = document.createElement('option');
+                opt.value = phrase;
+                opt.textContent = getDisplayText(phrase);
+                phraseSelect.appendChild(opt);
+            });
+        }
+
         // 加载命令和常用语选项
         function loadOptions() {
             fetch('/get_options').then(r => r.json()).then(data => {
-                // 按使用频率排序后填充命令下拉
-                sortByUsage(data.commands).forEach(cmd => {
-                    const opt = document.createElement('option');
-                    opt.value = cmd;
-                    opt.textContent = getDisplayText(cmd);
-                    cmdSelect.appendChild(opt);
-                });
-                // 按使用频率排序后填充常用语下拉
-                sortByUsage(data.phrases).forEach(phrase => {
-                    const opt = document.createElement('option');
-                    opt.value = phrase;
-                    opt.textContent = getDisplayText(phrase);
-                    phraseSelect.appendChild(opt);
-                });
+                cachedCommands = data.commands;
+                cachedPhrases = data.phrases;
+                refreshSelectOptions();
             });
         }
         loadOptions();
@@ -716,6 +789,7 @@ HTML_TEMPLATE = '''
                 selectEl.selectedIndex = 0; // 重置下拉框
                 clearAutoSendTimer();
                 incrementUsage(val); // 记录使用频率
+                refreshSelectOptions(); // 重新排序下拉框
 
                 if (val.startsWith('[KEY]')) {
                     // 发送热键，去掉前缀
@@ -794,6 +868,27 @@ HTML_TEMPLATE = '''
             }
         }
 
+        function toggleFullscreen() {
+            const btn = document.getElementById('fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    btn.textContent = '退出';
+                }).catch(err => {
+                    console.log('全屏失败:', err);
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    btn.textContent = '全屏';
+                });
+            }
+        }
+
+        // 监听全屏状态变化
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('fullscreen-btn');
+            btn.textContent = document.fullscreenElement ? '退出' : '全屏';
+        });
+
         function updateUndoBtn() {
             const btn = document.getElementById('undo-btn');
             btn.classList.toggle('enabled', hasHistory);
@@ -804,6 +899,7 @@ HTML_TEMPLATE = '''
             clearAutoSendTimer();
             const text = document.getElementById('input-box').value.trim();
             if (!text) return;
+            addToHistory(text); // 保存到历史记录
             fetch('/send', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
