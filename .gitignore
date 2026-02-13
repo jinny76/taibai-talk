@@ -1,2 +1,23 @@
+# 敏感配置
 start.ps1
 ecosystem.config.js
+
+# 营销资料
+marketing/
+
+# PyInstaller 打包产物
+build/
+dist/
+*.exe
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
