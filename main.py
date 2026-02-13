@@ -994,27 +994,66 @@ HTML_TEMPLATE = '''
         loadOptions();
 
         // 选择选项后直接发送到 PC
+        let lastHotkey = null; // 记住最后选择的热键
+        let repeatTimer = null;
+        const REPEAT_INTERVAL = 500; // 长按重复间隔 0.5秒
+
+        function sendHotkey(hotkey) {
+            fetch('/send_hotkey', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({hotkey: hotkey})
+            }).then(() => {
+                hasHistory = true;
+                updateUndoBtn();
+            });
+        }
+
+        function startRepeat() {
+            if (!lastHotkey) return;
+            sendHotkey(lastHotkey);
+            repeatTimer = setInterval(() => {
+                if (lastHotkey) sendHotkey(lastHotkey);
+            }, REPEAT_INTERVAL);
+        }
+
+        function stopRepeat() {
+            if (repeatTimer) {
+                clearInterval(repeatTimer);
+                repeatTimer = null;
+            }
+        }
+
+        // 命令下拉框长按连续发送
+        cmdSelect.addEventListener('touchstart', () => {
+            if (lastHotkey) startRepeat();
+        }, {passive: true});
+        cmdSelect.addEventListener('touchend', stopRepeat);
+        cmdSelect.addEventListener('touchcancel', stopRepeat);
+        cmdSelect.addEventListener('mousedown', () => {
+            if (lastHotkey) startRepeat();
+        });
+        cmdSelect.addEventListener('mouseup', stopRepeat);
+        cmdSelect.addEventListener('mouseleave', stopRepeat);
+
         function insertOption(selectEl) {
             const val = selectEl.value;
             if (val) {
                 selectEl.selectedIndex = 0; // 重置下拉框
                 clearAutoSendTimer();
+                stopRepeat(); // 停止之前的重复
                 incrementUsage(val); // 记录使用频率
                 refreshSelectOptions(); // 重新排序下拉框
 
                 if (val.startsWith('[KEY]')) {
                     // 发送热键，去掉前缀
                     const hotkey = val.substring(5);
-                    fetch('/send_hotkey', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({hotkey: hotkey})
-                    }).then(() => {
-                        hasHistory = true;
-                        updateUndoBtn();
-                    });
+                    lastHotkey = hotkey; // 记住热键
+                    sendHotkey(hotkey);
                 } else {
                     // 发送普通文本并回车
+                    lastHotkey = null; // 清除热键记忆
+                    addToHistory(val); // 只保存文本命令到历史
                     fetch('/send', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
@@ -1127,6 +1166,7 @@ HTML_TEMPLATE = '''
             if (text) {
                 // 先发送文本，再发送回车
                 clearAutoSendTimer();
+                addToHistory(text); // 保存到历史记录
                 fetch('/send', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
