@@ -416,6 +416,7 @@ HTML_TEMPLATE = '''
             width: 100%;
             height: var(--input-height);
             padding: 16px;
+            padding-right: 48px; /* 避开右上角图标 */
             border: 1px solid var(--border-color);
             border-radius: 8px;
             resize: none;
@@ -431,6 +432,92 @@ HTML_TEMPLATE = '''
             box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.1);
         }
         #input-box::placeholder { color: var(--text-muted); }
+
+        /* 输入区域容器 */
+        .input-area {
+            position: relative;
+            width: 100%;
+        }
+        .mode-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0.3;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        .mode-toggle:hover {
+            opacity: 0.7;
+        }
+
+        /* 触控板样式 - 全屏模式 */
+        #touchpad-area {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-primary);
+            z-index: 1000;
+        }
+        #touchpad-area.active {
+            display: block;
+        }
+        #touchpad {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-input);
+            touch-action: none;
+            cursor: crosshair;
+            position: relative;
+        }
+        #touchpad:active {
+            background: var(--bg-card);
+        }
+        #touchpad::after {
+            content: '单指点击=左键 | 双指点击=右键 | 快速双击=双击';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            pointer-events: none;
+            text-align: center;
+            line-height: 2;
+        }
+        .touchpad-exit {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 48px;
+            height: 48px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1001;
+            color: var(--gold-primary);
+        }
+        .touchpad-exit:active {
+            background: var(--gold-dark);
+        }
+
         .btn-section {
             margin-top: 16px;
         }
@@ -605,8 +692,17 @@ HTML_TEMPLATE = '''
         </select>
     </div>
 
+    <!-- 全屏触控板覆盖层 -->
+    <div id="touchpad-area">
+        <div id="touchpad"></div>
+        <button class="touchpad-exit" onclick="toggleInputMode()">⌨️</button>
+    </div>
+
     <div class="container">
-        <textarea id="input-box" placeholder="输入内容，停止后自动发送..."></textarea>
+        <div class="input-area">
+            <button class="mode-toggle" id="mode-toggle" onclick="toggleInputMode()" title="切换触控板">🖱️</button>
+            <textarea id="input-box" placeholder="输入内容，停止后自动发送..."></textarea>
+        </div>
 
         <div class="quick-selects">
             <select class="quick-select" id="cmd-select" onchange="insertOption(this)">
@@ -673,6 +769,121 @@ HTML_TEMPLATE = '''
         let autoSendTimer = null;
         let countdownTimer = null;
         let countdownValue = 0;
+        let isTouchpadMode = false;
+
+        // 触控板相关
+        const touchpad = document.getElementById('touchpad');
+        const touchpadArea = document.getElementById('touchpad-area');
+        const inputBox = document.getElementById('input-box');
+        const modeToggleBtn = document.getElementById('mode-toggle');
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let totalMoveDistance = 0;
+        let isTouching = false;
+        let touchCount = 0;
+        let lastTapTime = 0;
+        const SENSITIVITY = 4; // 灵敏度
+        const TAP_THRESHOLD = 15; // 点击判定：移动距离小于此值
+        const TAP_TIME = 250; // 点击判定：触摸时间小于此值(ms)
+        const DOUBLE_TAP_TIME = 300; // 双击间隔时间(ms)
+
+        function toggleInputMode() {
+            isTouchpadMode = !isTouchpadMode;
+            if (isTouchpadMode) {
+                touchpadArea.classList.add('active');
+            } else {
+                touchpadArea.classList.remove('active');
+            }
+        }
+
+        // 触控板事件处理
+        function handleTouchStart(e) {
+            e.preventDefault();
+            isTouching = true;
+            touchStartTime = Date.now();
+            totalMoveDistance = 0;
+            touchCount = e.touches ? e.touches.length : 1;
+            const touch = e.touches ? e.touches[0] : e;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }
+
+        function handleTouchMove(e) {
+            if (!isTouching) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            const rawDx = touch.clientX - touchStartX;
+            const rawDy = touch.clientY - touchStartY;
+            totalMoveDistance += Math.abs(rawDx) + Math.abs(rawDy);
+
+            const dx = Math.round(rawDx * SENSITIVITY);
+            const dy = Math.round(rawDy * SENSITIVITY);
+
+            if (dx !== 0 || dy !== 0) {
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                sendMouseMove(dx, dy);
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!isTouching) return;
+            const touchDuration = Date.now() - touchStartTime;
+            const now = Date.now();
+
+            // 判断是否为点击（移动距离小且时间短）
+            if (totalMoveDistance < TAP_THRESHOLD && touchDuration < TAP_TIME) {
+                if (touchCount >= 2) {
+                    // 双指点击 = 右键
+                    mouseClick('right', 1);
+                } else {
+                    // 单指点击，检测是否双击
+                    if (now - lastTapTime < DOUBLE_TAP_TIME) {
+                        mouseClick('left', 2); // 双击
+                        lastTapTime = 0;
+                    } else {
+                        mouseClick('left', 1); // 单击
+                        lastTapTime = now;
+                    }
+                }
+            }
+            isTouching = false;
+            touchCount = 0;
+        }
+
+        // 节流发送鼠标移动
+        let lastMoveTime = 0;
+        const MOVE_THROTTLE = 16; // ~60fps
+
+        function sendMouseMove(dx, dy) {
+            const now = Date.now();
+            if (now - lastMoveTime < MOVE_THROTTLE) return;
+            lastMoveTime = now;
+
+            fetch('/mouse_move', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({dx: dx, dy: dy})
+            }).catch(err => console.log('Mouse move error:', err));
+        }
+
+        function mouseClick(button, clicks) {
+            fetch('/mouse_click', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({button: button, clicks: clicks})
+            }).catch(err => console.log('Mouse click error:', err));
+        }
+
+        // 绑定触控板事件
+        touchpad.addEventListener('touchstart', handleTouchStart, {passive: false});
+        touchpad.addEventListener('touchmove', handleTouchMove, {passive: false});
+        touchpad.addEventListener('touchend', handleTouchEnd);
+        touchpad.addEventListener('mousedown', handleTouchStart);
+        touchpad.addEventListener('mousemove', handleTouchMove);
+        touchpad.addEventListener('mouseup', handleTouchEnd);
+        touchpad.addEventListener('mouseleave', handleTouchEnd);
 
         // 自动发送相关
         const autoSendToggle = document.getElementById('auto-send-toggle');
@@ -1338,6 +1549,30 @@ def send_hotkey():
         return jsonify({"status": "success"})
     except Exception as e:
         print(f"热键执行失败：{e}")
+        return jsonify({"status": "failed", "msg": str(e)})
+
+@app.route('/mouse_move', methods=['POST'])
+def mouse_move():
+    """移动鼠标（相对位移）"""
+    data = request.get_json()
+    dx = data.get('dx', 0)
+    dy = data.get('dy', 0)
+    try:
+        pyautogui.moveRel(dx, dy, _pause=False)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "failed", "msg": str(e)})
+
+@app.route('/mouse_click', methods=['POST'])
+def mouse_click():
+    """鼠标点击"""
+    data = request.get_json()
+    button = data.get('button', 'left')  # left/right
+    clicks = data.get('clicks', 1)       # 1=单击, 2=双击
+    try:
+        pyautogui.click(button=button, clicks=clicks)
+        return jsonify({"status": "success"})
+    except Exception as e:
         return jsonify({"status": "failed", "msg": str(e)})
 
 @app.route('/undo', methods=['POST'])
