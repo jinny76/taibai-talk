@@ -617,9 +617,7 @@
         .quick-actions-bar {
             display: flex;
             gap: 8px;
-            padding: 10px 15px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 12px;
         }
         .quick-actions-bar .btn {
             flex: 1;
@@ -822,13 +820,6 @@
         <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
     </div>
 
-    <div class="quick-actions-bar">
-        <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
-        <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
-        <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
-        <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
-    </div>
-
     <!-- 全屏触控板覆盖层 -->
     <div id="touchpad-area">
         <div id="touchpad"></div>
@@ -839,6 +830,13 @@
         <div class="input-area">
             <button class="mode-toggle" id="mode-toggle" onclick="toggleInputMode()" title="切换触控板">🖱️</button>
             <textarea id="input-box" placeholder="输入内容，停止后自动发送..."></textarea>
+        </div>
+
+        <div class="quick-actions-bar">
+            <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
+            <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
+            <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
+            <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
         </div>
 
         <div class="quick-selects">
