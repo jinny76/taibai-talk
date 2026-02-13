@@ -374,7 +374,7 @@ HTML_TEMPLATE = '''
             gap: 10px;
             margin-top: 14px;
             width: 100%;
-            overflow: hidden;
+            position: relative;
         }
         .quick-select {
             flex: 1;
@@ -404,6 +404,69 @@ HTML_TEMPLATE = '''
             color: var(--text-primary);
             padding: 10px;
         }
+
+        /* 自定义下拉框 */
+        .custom-dropdown {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+        .dropdown-toggle {
+            width: 100%;
+            padding: 12px 14px;
+            padding-right: 32px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .dropdown-toggle:hover { border-color: var(--border-hover); }
+        .dropdown-toggle.active { border-color: var(--gold-primary); }
+        .dropdown-menu {
+            display: none;
+            position: fixed;
+            max-height: 45vh;
+            width: 80vw;
+            max-width: 400px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            z-index: 2000;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item {
+            padding: 12px 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            transition: background 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:hover, .dropdown-item:active {
+            background: var(--bg-input);
+        }
+        .dropdown-item.hotkey {
+            color: var(--gold-primary);
+        }
+        .dropdown-item.pressing {
+            background: var(--gold-dark);
+        }
+
         .container {
             width: 100%;
             max-width: 500px;
@@ -705,15 +768,18 @@ HTML_TEMPLATE = '''
         </div>
 
         <div class="quick-selects">
-            <select class="quick-select" id="cmd-select" onchange="insertOption(this)">
-                <option value="">⚡</option>
-            </select>
-            <select class="quick-select" id="phrase-select" onchange="insertOption(this)">
-                <option value="">💬</option>
-            </select>
-            <select class="quick-select" id="history-select" onchange="selectHistory(this)">
-                <option value="">🕐</option>
-            </select>
+            <div class="custom-dropdown" id="cmd-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('cmd')">⚡</button>
+                <div class="dropdown-menu" id="cmd-menu"></div>
+            </div>
+            <div class="custom-dropdown" id="phrase-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('phrase')">💬</button>
+                <div class="dropdown-menu" id="phrase-menu"></div>
+            </div>
+            <div class="custom-dropdown" id="history-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('history')">🕐</button>
+                <div class="dropdown-menu" id="history-menu"></div>
+            </div>
             <button class="btn-enter-inline" onclick="sendEnter()">回车</button>
         </div>
 
@@ -728,11 +794,11 @@ HTML_TEMPLATE = '''
         <div class="btn-section">
             <div class="section-label">光标控制</div>
             <div class="btn-row">
-                <button class="btn btn-dir" onclick="moveCursor('left')">←</button>
-                <button class="btn btn-dir" onclick="moveCursor('up')">↑</button>
-                <button class="btn btn-dir" onclick="moveCursor('down')">↓</button>
-                <button class="btn btn-dir" onclick="moveCursor('right')">→</button>
-                <button class="btn btn-dir" onclick="sendDelete()">⌫</button>
+                <button class="btn btn-dir" id="btn-left" data-key="left">←</button>
+                <button class="btn btn-dir" id="btn-up" data-key="up">↑</button>
+                <button class="btn btn-dir" id="btn-down" data-key="down">↓</button>
+                <button class="btn btn-dir" id="btn-right" data-key="right">→</button>
+                <button class="btn btn-dir" id="btn-backspace" data-key="backspace">⌫</button>
             </div>
         </div>
 
@@ -889,12 +955,59 @@ HTML_TEMPLATE = '''
         const autoSendToggle = document.getElementById('auto-send-toggle');
         const delaySelect = document.getElementById('delay-select');
         const countdownEl = document.getElementById('countdown');
-        const cmdSelect = document.getElementById('cmd-select');
-        const phraseSelect = document.getElementById('phrase-select');
-        const historySelect = document.getElementById('history-select');
-        const MAX_HISTORY = 20; // 最多保存20条历史
+        const MAX_HISTORY = 20;
 
-        // 历史记录相关
+        // 自定义下拉框元素
+        const cmdMenu = document.getElementById('cmd-menu');
+        const phraseMenu = document.getElementById('phrase-menu');
+        const historyMenu = document.getElementById('history-menu');
+        let activeDropdown = null;
+
+        // 缓存数据
+        let cachedCommands = [];
+        let cachedPhrases = [];
+
+        // 长按重复发送
+        let repeatTimer = null;
+        let currentPressItem = null;
+        const REPEAT_INTERVAL = 500;
+        const LONG_PRESS_DELAY = 300;
+
+        // 切换下拉框
+        function toggleDropdown(type) {
+            const menuId = type + '-menu';
+            const menu = document.getElementById(menuId);
+            const wasOpen = menu.classList.contains('show');
+
+            // 关闭所有下拉框
+            closeAllDropdowns();
+
+            // 如果之前是关闭的，则打开
+            if (!wasOpen) {
+                // 居中显示
+                menu.style.left = '50%';
+                menu.style.top = '50%';
+                menu.style.transform = 'translate(-50%, -50%)';
+                menu.classList.add('show');
+                activeDropdown = type;
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(m => {
+                m.classList.remove('show');
+            });
+            activeDropdown = null;
+        }
+
+        // 点击外部关闭下拉框
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+
+        // 历史记录
         function getHistory() {
             return JSON.parse(localStorage.getItem('taibai_history') || '[]');
         }
@@ -902,102 +1015,35 @@ HTML_TEMPLATE = '''
         function addToHistory(text) {
             if (!text.trim()) return;
             let history = getHistory();
-            // 移除重复项
             history = history.filter(h => h !== text);
-            // 添加到开头
             history.unshift(text);
-            // 限制数量
             if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
             localStorage.setItem('taibai_history', JSON.stringify(history));
-            refreshHistorySelect();
+            refreshHistoryMenu();
         }
 
-        function refreshHistorySelect() {
-            while (historySelect.options.length > 1) historySelect.remove(1);
-            getHistory().forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item;
-                opt.textContent = item.length > 12 ? item.substring(0, 12) + '...' : item;
-                historySelect.appendChild(opt);
-            });
-        }
-
-        function selectHistory(selectEl) {
-            const val = selectEl.value;
-            if (val) {
-                document.getElementById('input-box').value = val;
-                selectEl.selectedIndex = 0;
-                document.getElementById('input-box').focus();
-            }
-        }
-
-        // 页面加载时初始化历史下拉框
-        refreshHistorySelect();
-
-        // 获取使用频率数据
+        // 使用频率
         function getUsageCount(key) {
             const data = JSON.parse(localStorage.getItem('taibai_usage') || '{}');
             return data[key] || 0;
         }
 
-        // 增加使用频率
         function incrementUsage(key) {
             const data = JSON.parse(localStorage.getItem('taibai_usage') || '{}');
             data[key] = (data[key] || 0) + 1;
             localStorage.setItem('taibai_usage', JSON.stringify(data));
         }
 
-        // 按使用频率排序
         function sortByUsage(items) {
             return [...items].sort((a, b) => getUsageCount(b) - getUsageCount(a));
         }
 
-        // 获取显示文本（去掉 [KEY] 前缀）
         function getDisplayText(str) {
             const text = str.startsWith('[KEY]') ? str.substring(5) : str;
-            return text.length > 15 ? text.substring(0, 15) + '...' : text;
+            return text.length > 18 ? text.substring(0, 18) + '...' : text;
         }
 
-        // 缓存原始数据
-        let cachedCommands = [];
-        let cachedPhrases = [];
-
-        // 刷新下拉框选项（按使用频率排序）
-        function refreshSelectOptions() {
-            // 清空现有选项（保留第一个占位项）
-            while (cmdSelect.options.length > 1) cmdSelect.remove(1);
-            while (phraseSelect.options.length > 1) phraseSelect.remove(1);
-
-            // 按使用频率排序后重新填充
-            sortByUsage(cachedCommands).forEach(cmd => {
-                const opt = document.createElement('option');
-                opt.value = cmd;
-                opt.textContent = getDisplayText(cmd);
-                cmdSelect.appendChild(opt);
-            });
-            sortByUsage(cachedPhrases).forEach(phrase => {
-                const opt = document.createElement('option');
-                opt.value = phrase;
-                opt.textContent = getDisplayText(phrase);
-                phraseSelect.appendChild(opt);
-            });
-        }
-
-        // 加载命令和常用语选项
-        function loadOptions() {
-            fetch('/get_options').then(r => r.json()).then(data => {
-                cachedCommands = data.commands;
-                cachedPhrases = data.phrases;
-                refreshSelectOptions();
-            });
-        }
-        loadOptions();
-
-        // 选择选项后直接发送到 PC
-        let lastHotkey = null; // 记住最后选择的热键
-        let repeatTimer = null;
-        const REPEAT_INTERVAL = 500; // 长按重复间隔 0.5秒
-
+        // 发送热键
         function sendHotkey(hotkey) {
             fetch('/send_hotkey', {
                 method: 'POST',
@@ -1009,12 +1055,12 @@ HTML_TEMPLATE = '''
             });
         }
 
-        function startRepeat() {
-            if (!lastHotkey) return;
-            sendHotkey(lastHotkey);
-            repeatTimer = setInterval(() => {
-                if (lastHotkey) sendHotkey(lastHotkey);
-            }, REPEAT_INTERVAL);
+        // 长按开始重复
+        function startRepeat(hotkey, item) {
+            currentPressItem = item;
+            item.classList.add('pressing');
+            sendHotkey(hotkey);
+            repeatTimer = setInterval(() => sendHotkey(hotkey), REPEAT_INTERVAL);
         }
 
         function stopRepeat() {
@@ -1022,51 +1068,156 @@ HTML_TEMPLATE = '''
                 clearInterval(repeatTimer);
                 repeatTimer = null;
             }
+            if (currentPressItem) {
+                currentPressItem.classList.remove('pressing');
+                currentPressItem = null;
+            }
         }
 
-        // 命令下拉框长按连续发送
-        cmdSelect.addEventListener('touchstart', () => {
-            if (lastHotkey) startRepeat();
-        }, {passive: true});
-        cmdSelect.addEventListener('touchend', stopRepeat);
-        cmdSelect.addEventListener('touchcancel', stopRepeat);
-        cmdSelect.addEventListener('mousedown', () => {
-            if (lastHotkey) startRepeat();
-        });
-        cmdSelect.addEventListener('mouseup', stopRepeat);
-        cmdSelect.addEventListener('mouseleave', stopRepeat);
+        // 创建下拉项
+        function createDropdownItem(value, isHotkey, onClick) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item' + (isHotkey ? ' hotkey' : '');
+            item.textContent = getDisplayText(value);
+            item.dataset.value = value;
 
-        function insertOption(selectEl) {
-            const val = selectEl.value;
-            if (val) {
-                selectEl.selectedIndex = 0; // 重置下拉框
-                clearAutoSendTimer();
-                stopRepeat(); // 停止之前的重复
-                incrementUsage(val); // 记录使用频率
-                refreshSelectOptions(); // 重新排序下拉框
+            let longPressTimer = null;
+            let didLongPress = false;
+            let startY = 0;
+            let isCancelled = false;
 
-                if (val.startsWith('[KEY]')) {
-                    // 发送热键，去掉前缀
-                    const hotkey = val.substring(5);
-                    lastHotkey = hotkey; // 记住热键
-                    sendHotkey(hotkey);
-                } else {
-                    // 发送普通文本并回车
-                    lastHotkey = null; // 清除热键记忆
-                    addToHistory(val); // 只保存文本命令到历史
+            if (isHotkey) {
+                // 热键支持长按，但要区分滑动
+                const startPress = (e) => {
+                    didLongPress = false;
+                    isCancelled = false;
+                    startY = e.touches ? e.touches[0].clientY : e.clientY;
+                    const hotkey = value.substring(5);
+                    longPressTimer = setTimeout(() => {
+                        if (!isCancelled) {
+                            didLongPress = true;
+                            startRepeat(hotkey, item);
+                        }
+                    }, LONG_PRESS_DELAY);
+                };
+
+                const movePress = (e) => {
+                    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+                    // 滑动超过10px就取消
+                    if (Math.abs(currentY - startY) > 10) {
+                        isCancelled = true;
+                        if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                        }
+                        stopRepeat();
+                    }
+                };
+
+                const endPress = (e) => {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    stopRepeat();
+                    if (!didLongPress && !isCancelled) {
+                        // 短按且没滑动，发送一次
+                        onClick(value);
+                    }
+                    didLongPress = false;
+                    isCancelled = false;
+                };
+
+                item.addEventListener('touchstart', startPress, {passive: true});
+                item.addEventListener('touchmove', movePress, {passive: true});
+                item.addEventListener('touchend', endPress);
+                item.addEventListener('touchcancel', endPress);
+                item.addEventListener('mousedown', startPress);
+                item.addEventListener('mousemove', movePress);
+                item.addEventListener('mouseup', endPress);
+                item.addEventListener('mouseleave', endPress);
+            } else {
+                // 普通文本，直接点击
+                item.addEventListener('click', () => onClick(value));
+            }
+
+            return item;
+        }
+
+        // 刷新命令菜单
+        function refreshCmdMenu() {
+            cmdMenu.innerHTML = '';
+            sortByUsage(cachedCommands).forEach(cmd => {
+                const isHotkey = cmd.startsWith('[KEY]');
+                const item = createDropdownItem(cmd, isHotkey, (val) => {
+                    closeAllDropdowns();
+                    clearAutoSendTimer();
+                    incrementUsage(val);
+                    if (isHotkey) {
+                        sendHotkey(val.substring(5));
+                    } else {
+                        addToHistory(val);
+                        fetch('/send', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({text: val})
+                        }).then(() => fetch('/send_enter', {method: 'POST'}))
+                          .then(() => { hasHistory = true; updateUndoBtn(); });
+                    }
+                    refreshCmdMenu();
+                });
+                cmdMenu.appendChild(item);
+            });
+        }
+
+        // 刷新常用语菜单
+        function refreshPhraseMenu() {
+            phraseMenu.innerHTML = '';
+            sortByUsage(cachedPhrases).forEach(phrase => {
+                const item = createDropdownItem(phrase, false, (val) => {
+                    closeAllDropdowns();
+                    clearAutoSendTimer();
+                    incrementUsage(val);
+                    addToHistory(val);
                     fetch('/send', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({text: val})
-                    }).then(() => {
-                        return fetch('/send_enter', {method: 'POST'});
-                    }).then(() => {
-                        hasHistory = true;
-                        updateUndoBtn();
-                    });
-                }
-            }
+                    }).then(() => fetch('/send_enter', {method: 'POST'}))
+                      .then(() => { hasHistory = true; updateUndoBtn(); });
+                    refreshPhraseMenu();
+                });
+                phraseMenu.appendChild(item);
+            });
         }
+
+        // 刷新历史菜单
+        function refreshHistoryMenu() {
+            historyMenu.innerHTML = '';
+            getHistory().forEach(text => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = text.length > 18 ? text.substring(0, 18) + '...' : text;
+                item.addEventListener('click', () => {
+                    closeAllDropdowns();
+                    document.getElementById('input-box').value = text;
+                    document.getElementById('input-box').focus();
+                });
+                historyMenu.appendChild(item);
+            });
+        }
+
+        // 加载选项
+        function loadOptions() {
+            fetch('/get_options').then(r => r.json()).then(data => {
+                cachedCommands = data.commands;
+                cachedPhrases = data.phrases;
+                refreshCmdMenu();
+                refreshPhraseMenu();
+            });
+        }
+        loadOptions();
+        refreshHistoryMenu();
 
         function getDelay() {
             return parseInt(delaySelect.value);
@@ -1219,6 +1370,47 @@ HTML_TEMPLATE = '''
                 updateUndoBtn();
             });
         }
+
+        // 方向键和退格键长按支持
+        function setupDirButton(btn) {
+            const key = btn.dataset.key;
+            let pressTimer = null;
+            let repeatTimer = null;
+            let didLongPress = false;
+
+            const doAction = () => {
+                if (key === 'backspace') {
+                    sendDelete();
+                } else {
+                    moveCursor(key);
+                }
+            };
+
+            const startPress = (e) => {
+                e.preventDefault();
+                didLongPress = false;
+                doAction(); // 立即执行一次
+                pressTimer = setTimeout(() => {
+                    didLongPress = true;
+                    repeatTimer = setInterval(doAction, 100); // 长按时100ms重复
+                }, 300);
+            };
+
+            const endPress = () => {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+            };
+
+            btn.addEventListener('touchstart', startPress, {passive: false});
+            btn.addEventListener('touchend', endPress);
+            btn.addEventListener('touchcancel', endPress);
+            btn.addEventListener('mousedown', startPress);
+            btn.addEventListener('mouseup', endPress);
+            btn.addEventListener('mouseleave', endPress);
+        }
+
+        // 初始化所有方向键按钮
+        document.querySelectorAll('.btn-dir[data-key]').forEach(setupDirButton);
 
         function openSymbolModal(symbol) {
             currentSymbol = symbol;
