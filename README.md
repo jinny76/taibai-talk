@@ -47,24 +47,35 @@
 
 ## 快速使用
 
-### 1. 安装依赖
+### 方式一：Windows 免安装版（推荐）
+
+1. 从 [Releases](https://github.com/jinny76/taibai-talk/releases) 下载 `太白说.zip`
+2. 解压后双击 `太白说.exe`
+3. 手机扫描二维码即可使用
+
+### 方式二：Python 运行
+
 ```bash
 git clone https://github.com/jinny76/taibai-talk.git
 cd taibai-talk
 pip install -r requirement.txt
-```
-
-### 2. 启动服务
-```bash
 python main.py
 ```
-
-### 3. 手机扫码访问
-启动后会显示二维码，手机扫码即可使用。
 
 ### 带密码启动
 ```bash
 python main.py --password yourpassword
+# 或
+太白说.exe --password yourpassword
+```
+
+### 自行打包 EXE
+
+```bash
+pip install pyinstaller
+.\build.ps1       # PowerShell
+# 或
+build.bat         # CMD
 ```
 
 ## 使用场景
