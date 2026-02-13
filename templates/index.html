@@ -539,19 +539,19 @@
 
         .btn {
             flex: 1;
-            padding: var(--btn-padding);
+            padding: 10px 12px;
             border: none;
             border-radius: var(--btn-radius);
             cursor: pointer;
             color: var(--text-primary);
-            font-size: var(--btn-font);
+            font-size: 13px;
             font-weight: 500;
             transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            min-height: 48px;
+            min-height: 40px;
             font-family: inherit;
         }
 
@@ -617,12 +617,10 @@
         .quick-actions-bar {
             display: flex;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .quick-actions-bar .btn {
             flex: 1;
-            padding: 10px 8px;
-            font-size: 13px;
         }
 
         /* Logo 菜单 */
@@ -837,6 +835,12 @@
             <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
             <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
             <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
+        </div>
+        <div class="quick-actions-bar">
+            <button class="btn btn-symbol" onclick="quickSend('回滚')">回滚</button>
+            <button class="btn btn-symbol" onclick="quickSend('/clear')">新任务</button>
+            <button class="btn btn-symbol" onclick="quickSend('编译')">编译</button>
+            <button class="btn btn-send" onclick="quickSend('提交')">提交</button>
         </div>
 
         <div class="quick-selects">
