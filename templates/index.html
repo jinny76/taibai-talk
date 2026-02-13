@@ -263,8 +263,8 @@
 
         .quick-selects {
             display: flex;
-            gap: 10px;
-            margin-top: 14px;
+            gap: var(--btn-gap);
+            margin-top: var(--btn-gap);
             width: 100%;
             position: relative;
         }
@@ -516,7 +516,7 @@
         }
 
         .btn-section {
-            margin-top: 16px;
+            margin-top: var(--btn-gap);
         }
 
         .section-label {
@@ -616,8 +616,10 @@
         /* 快捷操作栏 */
         .quick-actions-bar {
             display: flex;
-            gap: 8px;
-            margin-bottom: 8px;
+            gap: var(--btn-gap);
+        }
+        .quick-actions-bar + .quick-actions-bar {
+            margin-top: var(--btn-gap);
         }
         .quick-actions-bar .btn {
             flex: 1;
