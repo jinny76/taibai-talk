@@ -94,5 +94,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='icon.ico',  # 如有图标取消注释
+    icon='icon.ico',
+    version='version_info.txt',
 )
