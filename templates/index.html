@@ -613,6 +613,20 @@
             color: var(--gold-primary);
         }
 
+        /* 快捷操作栏 */
+        .quick-actions-bar {
+            display: flex;
+            gap: 8px;
+            padding: 10px 15px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .quick-actions-bar .btn {
+            flex: 1;
+            padding: 10px 8px;
+            font-size: 13px;
+        }
+
         /* Logo 菜单 */
         .logo-menu {
             display: none;
@@ -808,6 +822,13 @@
         <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
     </div>
 
+    <div class="quick-actions-bar">
+        <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
+        <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
+        <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
+        <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
+    </div>
+
     <!-- 全屏触控板覆盖层 -->
     <div id="touchpad-area">
         <div id="touchpad"></div>
@@ -867,16 +888,6 @@
                 <button class="btn btn-symbol" onclick="openSymbolModal('【】')">【】</button>
                 <button class="btn btn-symbol" onclick="openSymbolModal('{}')">{ }</button>
                 <button class="btn btn-symbol" onclick="openSymbolModal('[]')">[ ]</button>
-            </div>
-        </div>
-
-        <div class="btn-section">
-            <div class="section-label">快捷操作</div>
-            <div class="btn-row">
-                <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
-                <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
-                <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
-                <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
             </div>
         </div>
 
