@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>太白说</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600&display=swap');
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-card: #161616;
+            --bg-input: #1a1a1a;
+            --border-color: #2a2a2a;
+            --border-hover: #3a3a3a;
+            --gold-primary: #c9a962;
+            --gold-light: #d4b87a;
+            --gold-dark: #a68b4b;
+            --text-primary: #e8e8e8;
+            --text-secondary: #888888;
+            --text-muted: #555555;
+            --success: #4a9f6e;
+            --danger: #9f4a4a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background: var(--bg-primary);
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px 15px 40px;
+            --btn-gap: 10px;
+            --btn-radius: 8px;
+            --input-height: 120px;
+            --btn-font: 1rem;
+            --btn-padding: 14px 12px;
+        }
+
+        body.large-mode {
+            --btn-gap: 12px;
+            --btn-radius: 10px;
+            --input-height: 200px;
+            --btn-font: 1.2rem;
+            --btn-padding: 18px 14px;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--gold-primary);
+        }
+
+        .logo-text {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-primary);
+        }
+
+        #mode-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #mode-btn:hover,
+        #fullscreen-btn:hover {
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+
+        #fullscreen-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-left: 8px;
+        }
+
+        .auto-send-bar {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .auto-send-bar label {
+            color: var(--text-secondary);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            transition: 0.2s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background: var(--gold-dark);
+            border-color: var(--gold-primary);
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(18px);
+            background: var(--gold-light);
+        }
+
+        .delay-select {
+            padding: 6px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .delay-select:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+        }
+
+        .delay-select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+
+        .status-indicator.connected {
+            background: #4ade80;
+            box-shadow: 0 0 6px #4ade80;
+        }
+
+        .status-indicator.disconnected {
+            background: #f87171;
+            box-shadow: 0 0 6px #f87171;
+        }
+
+        .status-indicator.auth-required {
+            background: #fbbf24;
+            box-shadow: 0 0 6px #fbbf24;
+        }
+
+        .countdown-indicator {
+            padding: 4px 10px;
+            background: var(--gold-dark);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--bg-primary);
+            font-weight: 600;
+            opacity: 0;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .countdown-indicator.active {
+            opacity: 1;
+        }
+
+        .bar-spacer {
+            flex: 1;
+        }
+
+        .quick-selects {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+            width: 100%;
+            position: relative;
+        }
+
+        .quick-select {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+            box-sizing: border-box;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .quick-select:hover {
+            border-color: var(--border-hover);
+        }
+
+        .quick-select:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+        }
+
+        .quick-select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 10px;
+        }
+
+        /* 自定义下拉框 */
+        .custom-dropdown {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .dropdown-toggle {
+            width: 100%;
+            padding: 12px 14px;
+            padding-right: 32px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            text-align: left;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .dropdown-toggle:hover {
+            border-color: var(--border-hover);
+        }
+
+        .dropdown-toggle.active {
+            border-color: var(--gold-primary);
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: fixed;
+            max-height: 45vh;
+            width: 80vw;
+            max-width: 400px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            z-index: 2000;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            transition: background 0.15s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item:active {
+            background: var(--bg-input);
+        }
+
+        .dropdown-item.hotkey {
+            color: var(--gold-primary);
+        }
+
+        .dropdown-item.pressing {
+            background: var(--gold-dark);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        #input-box {
+            width: 100%;
+            height: var(--input-height);
+            padding: 16px;
+            padding-right: 48px;
+            /* 避开右上角图标 */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            resize: none;
+            font-size: 15px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        #input-box:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.1);
+        }
+
+        #input-box::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* 输入区域容器 */
+        .input-area {
+            position: relative;
+            width: 100%;
+        }
+
+        .mode-toggle {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            opacity: 0.3;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .mode-toggle:hover {
+            opacity: 0.7;
+        }
+
+        /* 触控板样式 - 全屏模式 */
+        #touchpad-area {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--bg-primary);
+            z-index: 1000;
+        }
+
+        #touchpad-area.active {
+            display: block;
+        }
+
+        #touchpad {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-input);
+            touch-action: none;
+            cursor: crosshair;
+            position: relative;
+        }
+
+        #touchpad:active {
+            background: var(--bg-card);
+        }
+
+        #touchpad::after {
+            content: '单指点击=左键 | 双指点击=右键 | 快速双击=双击';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--text-muted);
+            font-size: 14px;
+            pointer-events: none;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .touchpad-exit {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 48px;
+            height: 48px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            z-index: 1001;
+            color: var(--gold-primary);
+        }
+
+        .touchpad-exit:active {
+            background: var(--gold-dark);
+        }
+
+        .btn-section {
+            margin-top: 16px;
+        }
+
+        .section-label {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 500;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: var(--btn-gap);
+        }
+
+        .btn-row+.btn-row {
+            margin-top: var(--btn-gap);
+        }
+
+        .btn {
+            flex: 1;
+            padding: var(--btn-padding);
+            border: none;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: var(--btn-font);
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            min-height: 48px;
+            font-family: inherit;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-send {
+            background: var(--gold-primary);
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+
+        .btn-send:hover {
+            background: var(--gold-light);
+        }
+
+        .btn-enter {
+            background: var(--gold-primary);
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+
+        .btn-enter:hover {
+            background: var(--gold-light);
+        }
+
+        .btn-clear {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-clear:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-dir {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .btn-dir:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-symbol {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        .btn-symbol:hover {
+            border-color: var(--gold-primary);
+            color: var(--gold-primary);
+        }
+
+        /* Modal */
+        #symbol-modal,
+        #about-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-box {
+            width: 100%;
+            max-width: 380px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 28px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        #symbol-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 15px;
+            margin-bottom: 16px;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        #symbol-input:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+        }
+
+        #symbol-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        #confirm-symbol {
+            width: 100%;
+            padding: 14px;
+            background: var(--gold-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+
+        #confirm-symbol:hover {
+            background: var(--gold-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon" onclick="showAbout()" style="cursor:pointer;">
+                <svg viewBox="0 0 24 24">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+            </div>
+            <span class="logo-text">太白说</span>
+            <span class="status-indicator" id="status-indicator" title="连接状态"></span>
+            <span class="countdown-indicator" id="countdown">3s</span>
+        </div>
+        <button id="mode-btn" onclick="toggleMode()">放大</button>
+        <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
+    </div>
+
+    <div class="auto-send-bar">
+        <label>
+            <span class="toggle-switch">
+                <input type="checkbox" id="auto-send-toggle">
+                <span class="toggle-slider"></span>
+            </span>
+            自动发送
+        </label>
+        <select class="delay-select" id="delay-select">
+            <option value="1000">1秒</option>
+            <option value="2000">2秒</option>
+            <option value="3000" selected>3秒</option>
+            <option value="5000">5秒</option>
+        </select>
+    </div>
+
+    <!-- 全屏触控板覆盖层 -->
+    <div id="touchpad-area">
+        <div id="touchpad"></div>
+        <button class="touchpad-exit" onclick="toggleInputMode()">⌨️</button>
+    </div>
+
+    <div class="container">
+        <div class="input-area">
+            <button class="mode-toggle" id="mode-toggle" onclick="toggleInputMode()" title="切换触控板">🖱️</button>
+            <textarea id="input-box" placeholder="输入内容，停止后自动发送..."></textarea>
+        </div>
+
+        <div class="quick-selects">
+            <div class="custom-dropdown" id="cmd-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('cmd')">⚡</button>
+                <div class="dropdown-menu" id="cmd-menu"></div>
+            </div>
+            <div class="custom-dropdown" id="phrase-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('phrase')">💬</button>
+                <div class="dropdown-menu" id="phrase-menu"></div>
+            </div>
+            <div class="custom-dropdown" id="history-dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown('history')">🕐</button>
+                <div class="dropdown-menu" id="history-menu"></div>
+            </div>
+        </div>
+
+        <div class="btn-section">
+            <div class="btn-row">
+                <button class="btn btn-clear" onclick="clearInput()">清空</button>
+                <button class="btn btn-send" onclick="sendText()">发送</button>
+                <button class="btn btn-enter" onclick="sendEnter()">回车</button>
+            </div>
+        </div>
+
+        <div class="btn-section">
+            <div class="section-label">光标控制</div>
+            <div class="btn-row">
+                <button class="btn btn-dir" id="btn-left" data-key="left">←</button>
+                <button class="btn btn-dir" id="btn-up" data-key="up">↑</button>
+                <button class="btn btn-dir" id="btn-down" data-key="down">↓</button>
+                <button class="btn btn-dir" id="btn-right" data-key="right">→</button>
+                <button class="btn btn-dir" id="btn-backspace" data-key="backspace">⌫</button>
+            </div>
+        </div>
+
+        <div class="btn-section">
+            <div class="section-label">快捷符号</div>
+            <div class="btn-row">
+                <button class="btn btn-symbol" onclick="openSymbolModal('()')">（）</button>
+                <button class="btn btn-symbol" onclick="openSymbolModal('""')">""</button>
+                <button class="btn btn-symbol" onclick="openSymbolModal('「」')">「」</button>
+                <button class="btn btn-symbol" onclick="insertAtCursor('/')">/</button>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-symbol" onclick="openSymbolModal('《》')">《》</button>
+                <button class="btn btn-symbol" onclick="openSymbolModal('【】')">【】</button>
+                <button class="btn btn-symbol" onclick="openSymbolModal('{}')">{ }</button>
+                <button class="btn btn-symbol" onclick="openSymbolModal('[]')">[ ]</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="symbol-modal">
+        <div class="modal-box">
+            <div class="modal-title">输入内容</div>
+            <input type="text" id="symbol-input" placeholder="输入要包裹的文字...">
+            <button id="confirm-symbol" onclick="confirmSymbol()">确认</button>
+        </div>
+    </div>
+
+    <div id="about-modal">
+        <div class="modal-box" style="text-align:center;">
+            <div class="modal-title" style="font-size:20px;margin-bottom:8px;">太白说</div>
+            <p style="color:var(--gold-primary);font-size:15px;margin-bottom:8px;font-weight:500;">程序员の躺平神器</p>
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">躺在人体工学椅上写代码</p>
+            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:8px;">手机语音输入 · 电脑实时上屏</p>
+            <p style="color:var(--text-muted);font-size:12px;margin-bottom:20px;">
+                语音转文字 · 触控板 · 热键控制
+            </p>
+            <a href="https://taibai.kingfisher.live" target="_blank" rel="noopener"
+                onclick="event.stopPropagation(); window.open('https://taibai.kingfisher.live', '_blank');"
+                style="display:inline-block;padding:10px 24px;background:var(--gold-primary);color:var(--bg-primary);border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
+                taibai.kingfisher.live
+            </a>
+            <p style="color:var(--text-muted);font-size:11px;margin-top:20px;">v1.0</p>
+        </div>
+    </div>
+
+    <script>
+        let hasHistory = false;
+        let currentSymbol = "";
+        let isLargeMode = false;
+        let autoSendTimer = null;
+        let countdownTimer = null;
+        let countdownValue = 0;
+        let isTouchpadMode = false;
+
+        // ===== 健康检测：定期检查连接状态 =====
+        const statusIndicator = document.getElementById('status-indicator');
+        let healthCheckInterval = null;
+
+        function updateStatus(status) {
+            statusIndicator.className = 'status-indicator ' + status;
+            if (status === 'connected') {
+                statusIndicator.title = '已连接';
+            } else if (status === 'disconnected') {
+                statusIndicator.title = '连接断开';
+            } else if (status === 'auth-required') {
+                statusIndicator.title = '需要重新登录';
+            }
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health', { method: 'GET' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated) {
+                        updateStatus('connected');
+                    } else {
+                        updateStatus('auth-required');
+                        if (confirm('登录已过期，需要重新登录')) {
+                            location.reload();
+                        }
+                    }
+                } else {
+                    updateStatus('disconnected');
+                }
+            } catch (e) {
+                updateStatus('disconnected');
+            }
+        }
+
+        // 启动健康检测（每 10 秒检测一次）
+        checkHealth();
+        healthCheckInterval = setInterval(checkHealth, 10000);
+
+        // 触控板相关
+        const touchpad = document.getElementById('touchpad');
+        const touchpadArea = document.getElementById('touchpad-area');
+        const inputBox = document.getElementById('input-box');
+        const modeToggleBtn = document.getElementById('mode-toggle');
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        let totalMoveDistance = 0;
+        let isTouching = false;
+        let touchCount = 0;
+        let lastTapTime = 0;
+        const SENSITIVITY = 4;
+        const TAP_THRESHOLD = 15;
+        const TAP_TIME = 250;
+        const DOUBLE_TAP_TIME = 300;
+
+        function toggleInputMode() {
+            isTouchpadMode = !isTouchpadMode;
+            if (isTouchpadMode) {
+                touchpadArea.classList.add('active');
+            } else {
+                touchpadArea.classList.remove('active');
+            }
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            isTouching = true;
+            touchStartTime = Date.now();
+            totalMoveDistance = 0;
+            touchCount = e.touches ? e.touches.length : 1;
+            const touch = e.touches ? e.touches[0] : e;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        }
+
+        function handleTouchMove(e) {
+            if (!isTouching) return;
+            e.preventDefault();
+            const touch = e.touches ? e.touches[0] : e;
+            const rawDx = touch.clientX - touchStartX;
+            const rawDy = touch.clientY - touchStartY;
+            totalMoveDistance += Math.abs(rawDx) + Math.abs(rawDy);
+
+            const dx = Math.round(rawDx * SENSITIVITY);
+            const dy = Math.round(rawDy * SENSITIVITY);
+
+            if (dx !== 0 || dy !== 0) {
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                sendMouseMove(dx, dy);
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if (!isTouching) return;
+            const touchDuration = Date.now() - touchStartTime;
+            const now = Date.now();
+
+            if (totalMoveDistance < TAP_THRESHOLD && touchDuration < TAP_TIME) {
+                if (touchCount >= 2) {
+                    mouseClick('right', 1);
+                } else {
+                    if (now - lastTapTime < DOUBLE_TAP_TIME) {
+                        mouseClick('left', 2);
+                        lastTapTime = 0;
+                    } else {
+                        mouseClick('left', 1);
+                        lastTapTime = now;
+                    }
+                }
+            }
+            isTouching = false;
+            touchCount = 0;
+        }
+
+        let lastMoveTime = 0;
+        const MOVE_THROTTLE = 16;
+
+        function sendMouseMove(dx, dy) {
+            const now = Date.now();
+            if (now - lastMoveTime < MOVE_THROTTLE) return;
+            lastMoveTime = now;
+
+            fetch('/mouse_move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dx: dx, dy: dy })
+            }).catch(err => console.log('Mouse move error:', err));
+        }
+
+        function mouseClick(button, clicks) {
+            fetch('/mouse_click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ button: button, clicks: clicks })
+            }).catch(err => console.log('Mouse click error:', err));
+        }
+
+        touchpad.addEventListener('touchstart', handleTouchStart, { passive: false });
+        touchpad.addEventListener('touchmove', handleTouchMove, { passive: false });
+        touchpad.addEventListener('touchend', handleTouchEnd);
+        touchpad.addEventListener('mousedown', handleTouchStart);
+        touchpad.addEventListener('mousemove', handleTouchMove);
+        touchpad.addEventListener('mouseup', handleTouchEnd);
+        touchpad.addEventListener('mouseleave', handleTouchEnd);
+
+        const autoSendToggle = document.getElementById('auto-send-toggle');
+        const delaySelect = document.getElementById('delay-select');
+        const countdownEl = document.getElementById('countdown');
+        const MAX_HISTORY = 20;
+
+        const cmdMenu = document.getElementById('cmd-menu');
+        const phraseMenu = document.getElementById('phrase-menu');
+        const historyMenu = document.getElementById('history-menu');
+        let activeDropdown = null;
+
+        let cachedCommands = [];
+        let cachedPhrases = [];
+
+        let repeatTimer = null;
+        let currentPressItem = null;
+        const REPEAT_INTERVAL = 500;
+        const LONG_PRESS_DELAY = 300;
+
+        function toggleDropdown(type) {
+            const menuId = type + '-menu';
+            const menu = document.getElementById(menuId);
+            const wasOpen = menu.classList.contains('show');
+
+            closeAllDropdowns();
+
+            if (!wasOpen) {
+                menu.style.left = '50%';
+                menu.style.top = '50%';
+                menu.style.transform = 'translate(-50%, -50%)';
+                menu.classList.add('show');
+                activeDropdown = type;
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.dropdown-menu').forEach(m => {
+                m.classList.remove('show');
+            });
+            activeDropdown = null;
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-dropdown')) {
+                closeAllDropdowns();
+            }
+        });
+
+        function getHistory() {
+            return JSON.parse(localStorage.getItem('taibai_history') || '[]');
+        }
+
+        function addToHistory(text) {
+            if (!text.trim()) return;
+            let history = getHistory();
+            history = history.filter(h => h !== text);
+            history.unshift(text);
+            if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+            localStorage.setItem('taibai_history', JSON.stringify(history));
+            refreshHistoryMenu();
+        }
+
+        function getUsageCount(key) {
+            const data = JSON.parse(localStorage.getItem('taibai_usage') || '{}');
+            return data[key] || 0;
+        }
+
+        function incrementUsage(key) {
+            const data = JSON.parse(localStorage.getItem('taibai_usage') || '{}');
+            data[key] = (data[key] || 0) + 1;
+            localStorage.setItem('taibai_usage', JSON.stringify(data));
+        }
+
+        function sortByUsage(items) {
+            return [...items].sort((a, b) => getUsageCount(b) - getUsageCount(a));
+        }
+
+        function getDisplayText(str) {
+            const text = str.startsWith('[KEY]') ? str.substring(5) : str;
+            return text.length > 18 ? text.substring(0, 18) + '...' : text;
+        }
+
+        function sendHotkey(hotkey) {
+            fetch('/send_hotkey', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ hotkey: hotkey })
+            }).then(() => {
+                hasHistory = true;
+            });
+        }
+
+        function startRepeat(hotkey, item) {
+            currentPressItem = item;
+            item.classList.add('pressing');
+            sendHotkey(hotkey);
+            repeatTimer = setInterval(() => sendHotkey(hotkey), REPEAT_INTERVAL);
+        }
+
+        function stopRepeat() {
+            if (repeatTimer) {
+                clearInterval(repeatTimer);
+                repeatTimer = null;
+            }
+            if (currentPressItem) {
+                currentPressItem.classList.remove('pressing');
+                currentPressItem = null;
+            }
+        }
+
+        function createDropdownItem(value, isHotkey, onClick) {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item' + (isHotkey ? ' hotkey' : '');
+            item.textContent = getDisplayText(value);
+            item.dataset.value = value;
+
+            let longPressTimer = null;
+            let didLongPress = false;
+            let startY = 0;
+            let isCancelled = false;
+
+            if (isHotkey) {
+                const startPress = (e) => {
+                    didLongPress = false;
+                    isCancelled = false;
+                    startY = e.touches ? e.touches[0].clientY : e.clientY;
+                    const hotkey = value.substring(5);
+                    longPressTimer = setTimeout(() => {
+                        if (!isCancelled) {
+                            didLongPress = true;
+                            startRepeat(hotkey, item);
+                        }
+                    }, LONG_PRESS_DELAY);
+                };
+
+                const movePress = (e) => {
+                    const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+                    if (Math.abs(currentY - startY) > 10) {
+                        isCancelled = true;
+                        if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                        }
+                        stopRepeat();
+                    }
+                };
+
+                const endPress = (e) => {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    stopRepeat();
+                    if (!didLongPress && !isCancelled) {
+                        onClick(value);
+                    }
+                    didLongPress = false;
+                    isCancelled = false;
+                };
+
+                item.addEventListener('touchstart', startPress, { passive: true });
+                item.addEventListener('touchmove', movePress, { passive: true });
+                item.addEventListener('touchend', endPress);
+                item.addEventListener('touchcancel', endPress);
+                item.addEventListener('mousedown', startPress);
+                item.addEventListener('mousemove', movePress);
+                item.addEventListener('mouseup', endPress);
+                item.addEventListener('mouseleave', endPress);
+            } else {
+                item.addEventListener('click', () => onClick(value));
+            }
+
+            return item;
+        }
+
+        function refreshCmdMenu() {
+            cmdMenu.innerHTML = '';
+            sortByUsage(cachedCommands).forEach(cmd => {
+                const isHotkey = cmd.startsWith('[KEY]');
+                const item = createDropdownItem(cmd, isHotkey, (val) => {
+                    closeAllDropdowns();
+                    clearAutoSendTimer();
+                    incrementUsage(val);
+                    if (isHotkey) {
+                        sendHotkey(val.substring(5));
+                    } else {
+                        addToHistory(val);
+                        fetch('/send', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: val })
+                        }).then(() => fetch('/send_enter', { method: 'POST' }))
+                            .then(() => { hasHistory = true; });
+                    }
+                    refreshCmdMenu();
+                });
+                cmdMenu.appendChild(item);
+            });
+        }
+
+        function refreshPhraseMenu() {
+            phraseMenu.innerHTML = '';
+            sortByUsage(cachedPhrases).forEach(phrase => {
+                const item = createDropdownItem(phrase, false, (val) => {
+                    closeAllDropdowns();
+                    clearAutoSendTimer();
+                    incrementUsage(val);
+                    addToHistory(val);
+                    fetch('/send', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: val })
+                    }).then(() => fetch('/send_enter', { method: 'POST' }))
+                        .then(() => { hasHistory = true; });
+                    refreshPhraseMenu();
+                });
+                phraseMenu.appendChild(item);
+            });
+        }
+
+        function refreshHistoryMenu() {
+            historyMenu.innerHTML = '';
+            getHistory().forEach(text => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = text.length > 18 ? text.substring(0, 18) + '...' : text;
+                item.addEventListener('click', () => {
+                    closeAllDropdowns();
+                    document.getElementById('input-box').value = text;
+                    document.getElementById('input-box').focus();
+                });
+                historyMenu.appendChild(item);
+            });
+        }
+
+        function loadOptions() {
+            fetch('/get_options').then(r => r.json()).then(data => {
+                cachedCommands = data.commands;
+                cachedPhrases = data.phrases;
+                refreshCmdMenu();
+                refreshPhraseMenu();
+            });
+        }
+        loadOptions();
+        refreshHistoryMenu();
+
+        function getDelay() {
+            return parseInt(delaySelect.value);
+        }
+
+        function startAutoSendTimer() {
+            if (!autoSendToggle.checked) return;
+            const text = document.getElementById('input-box').value.trim();
+            if (!text) return;
+
+            clearAutoSendTimer();
+            const delay = getDelay();
+            countdownValue = delay / 1000;
+            countdownEl.textContent = countdownValue + 's';
+            countdownEl.classList.add('active');
+
+            countdownTimer = setInterval(() => {
+                countdownValue--;
+                if (countdownValue > 0) {
+                    countdownEl.textContent = countdownValue + 's';
+                }
+            }, 1000);
+
+            autoSendTimer = setTimeout(() => {
+                clearAutoSendTimer();
+                sendText();
+            }, delay);
+        }
+
+        function clearAutoSendTimer() {
+            if (autoSendTimer) { clearTimeout(autoSendTimer); autoSendTimer = null; }
+            if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+            countdownEl.classList.remove('active');
+        }
+
+        function toggleMode() {
+            const body = document.body;
+            const btn = document.getElementById('mode-btn');
+            if (isLargeMode) {
+                body.classList.remove('large-mode');
+                btn.textContent = '放大';
+                isLargeMode = false;
+            } else {
+                body.classList.add('large-mode');
+                btn.textContent = '紧凑';
+                isLargeMode = true;
+            }
+        }
+
+        function toggleFullscreen() {
+            const btn = document.getElementById('fullscreen-btn');
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                    btn.textContent = '退出';
+                }).catch(err => {
+                    console.log('全屏失败:', err);
+                });
+            } else {
+                document.exitFullscreen().then(() => {
+                    btn.textContent = '全屏';
+                });
+            }
+        }
+
+        document.addEventListener('fullscreenchange', () => {
+            const btn = document.getElementById('fullscreen-btn');
+            btn.textContent = document.fullscreenElement ? '退出' : '全屏';
+        });
+
+        function sendText() {
+            clearAutoSendTimer();
+            const text = document.getElementById('input-box').value.trim();
+            if (!text) return;
+            addToHistory(text);
+            fetch('/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            }).then(response => {
+                if (response.status === 401) {
+                    updateStatus('auth-required');
+                    alert('登录已过期，请重新登录');
+                    location.reload();
+                    return;
+                }
+                updateStatus('connected');
+                hasHistory = true;
+                document.getElementById('input-box').value = '';
+            }).catch(e => {
+                updateStatus('disconnected');
+                alert('发送失败，请检查连接');
+            });
+        }
+
+        function sendEnter() {
+            const text = document.getElementById('input-box').value.trim();
+            if (text) {
+                clearAutoSendTimer();
+                addToHistory(text);
+                fetch('/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                }).then(() => {
+                    document.getElementById('input-box').value = '';
+                    return fetch('/send_enter', { method: 'POST' });
+                }).then(() => {
+                    hasHistory = true;
+                });
+            } else {
+                fetch('/send_enter', { method: 'POST' }).then(() => {
+                    hasHistory = true;
+                });
+            }
+        }
+
+        function clearInput() {
+            clearAutoSendTimer();
+            document.getElementById('input-box').value = '';
+        }
+
+        function moveCursor(direction) {
+            fetch('/move_cursor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ direction: direction })
+            });
+        }
+
+        function sendDelete() {
+            fetch('/delete_pc', { method: 'POST' });
+        }
+
+        function setupDirButton(btn) {
+            const key = btn.dataset.key;
+            let pressTimer = null;
+            let repeatTimer = null;
+
+            const doAction = () => {
+                if (key === 'backspace') {
+                    sendDelete();
+                } else {
+                    moveCursor(key);
+                }
+            };
+
+            const startPress = (e) => {
+                e.preventDefault();
+                doAction();
+                pressTimer = setTimeout(() => {
+                    repeatTimer = setInterval(doAction, 100);
+                }, 300);
+            };
+
+            const endPress = () => {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+                if (repeatTimer) { clearInterval(repeatTimer); repeatTimer = null; }
+            };
+
+            btn.addEventListener('touchstart', startPress, { passive: false });
+            btn.addEventListener('touchend', endPress);
+            btn.addEventListener('touchcancel', endPress);
+            btn.addEventListener('mousedown', startPress);
+            btn.addEventListener('mouseup', endPress);
+            btn.addEventListener('mouseleave', endPress);
+        }
+
+        document.querySelectorAll('.btn-dir[data-key]').forEach(setupDirButton);
+
+        function openSymbolModal(symbol) {
+            currentSymbol = symbol;
+            document.getElementById('symbol-modal').style.display = 'flex';
+            const input = document.getElementById('symbol-input');
+            input.value = '';
+            setTimeout(() => input.focus(), 100);
+        }
+
+        function insertAtCursor(text) {
+            const input = document.getElementById('input-box');
+            const start = input.selectionStart, end = input.selectionEnd;
+            input.value = input.value.substring(0, start) + text + input.value.substring(end);
+            input.selectionStart = input.selectionEnd = start + text.length;
+            input.focus();
+        }
+
+        function confirmSymbol() {
+            const content = document.getElementById('symbol-input').value.trim();
+            document.getElementById('symbol-modal').style.display = 'none';
+            if (!content) return;
+            const mid = currentSymbol.length / 2;
+            insertAtCursor(currentSymbol.substring(0, mid) + content + currentSymbol.substring(mid));
+        }
+
+        document.getElementById('symbol-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); confirmSymbol(); }
+        });
+
+        document.getElementById('symbol-modal').addEventListener('click', function (e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
+        function showAbout() {
+            document.getElementById('about-modal').style.display = 'flex';
+        }
+        document.getElementById('about-modal').addEventListener('click', function (e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
+        document.getElementById('input-box').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                this.value.trim() ? sendText() : sendEnter();
+            }
+            if (e.key === 'Backspace' && !this.value.trim()) {
+                e.preventDefault();
+                sendDelete();
+            }
+        });
+
+        document.getElementById('input-box').addEventListener('input', startAutoSendTimer);
+        autoSendToggle.addEventListener('change', function () {
+            localStorage.setItem('taibai_auto_send', this.checked ? '1' : '0');
+            clearAutoSendTimer();
+        });
+        delaySelect.addEventListener('change', function () {
+            localStorage.setItem('taibai_auto_delay', this.value);
+        });
+
+        (function loadSettings() {
+            const savedAutoSend = localStorage.getItem('taibai_auto_send');
+            const savedDelay = localStorage.getItem('taibai_auto_delay');
+            if (savedAutoSend === '1') {
+                autoSendToggle.checked = true;
+            }
+            if (savedDelay) {
+                delaySelect.value = savedDelay;
+            }
+        })();
+
+        // ===== 自动聚焦 =====
+        let autoFocusTimer = null;
+        let autoFocusCountdownTimer = null;
+        let autoFocusCountdown = 0;
+        const AUTO_FOCUS_SECONDS = 5;
+
+        function shouldAutoFocus() {
+            const symbolModal = document.getElementById('symbol-modal');
+            const aboutModal = document.getElementById('about-modal');
+            const isSymbolModalOpen = symbolModal && symbolModal.style.display === 'flex';
+            const isAboutModalOpen = aboutModal && aboutModal.style.display === 'flex';
+            const isDropdownOpen = activeDropdown !== null;
+            return !isTouchpadMode && document.activeElement !== inputBox && !isSymbolModalOpen && !isAboutModalOpen && !isDropdownOpen;
+        }
+
+        function clearAutoFocusTimer() {
+            if (autoFocusTimer) { clearTimeout(autoFocusTimer); autoFocusTimer = null; }
+            if (autoFocusCountdownTimer) { clearInterval(autoFocusCountdownTimer); autoFocusCountdownTimer = null; }
+            if (!autoSendTimer) {
+                countdownEl.classList.remove('active');
+            }
+        }
+
+        function resetAutoFocusTimer() {
+            clearAutoFocusTimer();
+            if (!shouldAutoFocus()) return;
+
+            autoFocusCountdown = AUTO_FOCUS_SECONDS;
+
+            autoFocusTimer = setTimeout(() => {
+                if (!shouldAutoFocus()) return;
+
+                countdownEl.textContent = autoFocusCountdown + 's';
+                countdownEl.classList.add('active');
+
+                autoFocusCountdownTimer = setInterval(() => {
+                    autoFocusCountdown--;
+                    if (autoFocusCountdown > 0) {
+                        countdownEl.textContent = autoFocusCountdown + 's';
+                    } else {
+                        clearAutoFocusTimer();
+                        if (shouldAutoFocus()) {
+                            inputBox.focus();
+                        }
+                    }
+                }, 1000);
+            }, 1000);
+        }
+
+        ['touchstart', 'touchmove', 'click', 'keydown', 'input'].forEach(evt => {
+            document.addEventListener(evt, resetAutoFocusTimer, { passive: true });
+        });
+
+        resetAutoFocusTimer();
+    </script>
+</body>
+
+</html>

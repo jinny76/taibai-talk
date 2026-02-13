@@ -13,6 +13,8 @@ a = Analysis(
         ('hot-rule.txt', '.'),
         ('commands.txt', '.'),
         ('phrases.txt', '.'),
+        # HTML 模板文件
+        ('templates', 'templates'),
     ],
     hiddenimports=[
         # Flask 相关
