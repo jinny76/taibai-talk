@@ -42,6 +42,7 @@
 [KEY]Ctrl+1
 [KEY]Ctrl+2
 [KEY]Ctrl+Tab
+[KEY]Ctrl+Shift+Tab
 [KEY]Ctrl+Shift+P
 [KEY]Ctrl+P
 [KEY]Ctrl+B
