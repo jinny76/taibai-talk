@@ -4,6 +4,7 @@ import pyperclip
 import socket
 import re
 import os
+import time
 import sys
 import argparse
 import secrets
@@ -16,6 +17,11 @@ app.secret_key = secrets.token_hex(16)  # 用于 session 加密
 
 # 密码配置（启动时通过参数设置）
 AUTH_PASSWORD = None
+
+# 暴力破解防护
+LOGIN_ATTEMPTS = {}  # {ip: {"count": 次数, "lockout_until": 锁定截止时间}}
+MAX_ATTEMPTS = 5  # 最大尝试次数
+LOCKOUT_TIME = 300  # 锁定时间（秒）
 
 # 存储正则替换规则（key: 编译后的正则表达式，value: 替换式）
 REPLACE_RULES = []
@@ -1755,6 +1761,7 @@ LOGIN_TEMPLATE = '''
                     window.location.href = '/';
                 } else {
                     localStorage.removeItem(STORAGE_KEY);
+                    errorMsg.textContent = data.msg || '密码错误';
                     errorMsg.classList.add('show');
                     card.classList.add('shake');
                     passwordInput.value = '';
@@ -1791,6 +1798,17 @@ def check_auth():
         return True  # 未设置密码，无需验证
     return session.get('authenticated', False)
 
+@app.before_request
+def require_auth():
+    """所有 API 请求都需要认证（除了首页和登录接口）"""
+    # 不需要认证的路由
+    public_routes = ['/', '/auth']
+    if request.path in public_routes:
+        return None
+    # 检查认证
+    if not check_auth():
+        return jsonify({"status": "unauthorized", "msg": "请先登录"}), 401
+
 # ------------ 原有接口部分 ------------
 @app.route('/')
 def index():
@@ -1800,12 +1818,38 @@ def index():
 
 @app.route('/auth', methods=['POST'])
 def auth():
+    ip = request.remote_addr
+    now = time.time()
+
+    # 检查是否被锁定
+    if ip in LOGIN_ATTEMPTS:
+        attempt = LOGIN_ATTEMPTS[ip]
+        if attempt.get("lockout_until", 0) > now:
+            remaining = int(attempt["lockout_until"] - now)
+            return jsonify({"status": "locked", "msg": f"尝试次数过多，请{remaining}秒后重试"}), 429
+
     data = request.get_json()
     password = data.get('password', '')
+
     if password == AUTH_PASSWORD:
         session['authenticated'] = True
+        # 登录成功，清除失败记录
+        if ip in LOGIN_ATTEMPTS:
+            del LOGIN_ATTEMPTS[ip]
         return jsonify({"status": "success"})
-    return jsonify({"status": "failed"})
+
+    # 登录失败，记录尝试次数
+    if ip not in LOGIN_ATTEMPTS:
+        LOGIN_ATTEMPTS[ip] = {"count": 0}
+    LOGIN_ATTEMPTS[ip]["count"] += 1
+
+    # 超过最大尝试次数，锁定
+    if LOGIN_ATTEMPTS[ip]["count"] >= MAX_ATTEMPTS:
+        LOGIN_ATTEMPTS[ip]["lockout_until"] = now + LOCKOUT_TIME
+        return jsonify({"status": "locked", "msg": f"尝试次数过多，请{LOCKOUT_TIME}秒后重试"}), 429
+
+    remaining_attempts = MAX_ATTEMPTS - LOGIN_ATTEMPTS[ip]["count"]
+    return jsonify({"status": "failed", "msg": f"密码错误，还剩{remaining_attempts}次机会"})
 
 @app.route('/get_options')
 def get_options():
