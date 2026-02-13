@@ -46,14 +46,6 @@
             --btn-padding: 14px 12px;
         }
 
-        body.large-mode {
-            --btn-gap: 12px;
-            --btn-radius: 10px;
-            --input-height: 200px;
-            --btn-font: 1.2rem;
-            --btn-padding: 18px 14px;
-        }
-
         .header {
             width: 100%;
             max-width: 500px;
@@ -96,37 +88,32 @@
             color: var(--text-primary);
         }
 
-        #mode-btn {
-            padding: 8px 16px;
+        .header-actions {
+            display: flex;
+            gap: 0;
+        }
+        .header-actions button {
+            padding: 8px 10px;
             background: transparent;
             border: 1px solid var(--border-color);
             color: var(--text-secondary);
-            border-radius: 6px;
-            font-size: 12px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
-
-        #mode-btn:hover,
-        #fullscreen-btn:hover {
+        .header-actions button:first-child {
+            border-radius: 6px 0 0 6px;
+            border-right: none;
+        }
+        .header-actions button:last-child {
+            border-radius: 0 6px 6px 0;
+        }
+        .header-actions button:hover {
             border-color: var(--gold-primary);
             color: var(--gold-primary);
         }
-
-        #fullscreen-btn {
-            padding: 8px 16px;
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-left: 8px;
+        .header-actions button:first-child:hover + button {
+            border-left-color: var(--gold-primary);
         }
 
         .auto-send-bar {
@@ -797,6 +784,81 @@
         #confirm-symbol:hover {
             background: var(--gold-light);
         }
+
+        /* 截屏弹窗 */
+        #screenshot-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            touch-action: none;
+        }
+        #screenshot-modal.show { display: flex; }
+        .screenshot-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #screenshot-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .screenshot-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 44px;
+            height: 44px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            z-index: 2001;
+            color: var(--gold-primary);
+        }
+        .screenshot-close:active {
+            background: var(--gold-dark);
+        }
+        .screenshot-refresh {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            width: 44px;
+            height: 44px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-primary);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            z-index: 2001;
+            color: var(--gold-primary);
+        }
+        .screenshot-refresh:active {
+            background: var(--gold-dark);
+        }
+        .screenshot-loading {
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
     </style>
 </head>
 
@@ -817,8 +879,10 @@
             <span class="status-indicator" id="status-indicator" title="连接状态"></span>
             <span class="countdown-indicator" id="countdown">3s</span>
         </div>
-        <button id="mode-btn" onclick="toggleMode()">放大</button>
-        <button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
+        <div class="header-actions">
+            <button onclick="takeScreenshot()">📷</button>
+            <button id="fullscreen-btn" onclick="toggleFullscreen()">⛶</button>
+        </div>
     </div>
 
     <!-- 全屏触控板覆盖层 -->
@@ -966,10 +1030,18 @@
         </div>
     </div>
 
+    <div id="screenshot-modal">
+        <div class="screenshot-container">
+            <button class="screenshot-refresh" onclick="refreshScreenshot()">🔄</button>
+            <button class="screenshot-close" onclick="closeScreenshot()">✕</button>
+            <span id="screenshot-loading" class="screenshot-loading">正在截屏...</span>
+            <img id="screenshot-img" style="display:none;">
+        </div>
+    </div>
+
     <script>
         let hasHistory = false;
         let currentSymbol = "";
-        let isLargeMode = false;
         let autoSendTimer = null;
         let countdownTimer = null;
         let countdownValue = 0;
@@ -1403,38 +1475,24 @@
             countdownEl.classList.remove('active');
         }
 
-        function toggleMode() {
-            const body = document.body;
-            const btn = document.getElementById('mode-btn');
-            if (isLargeMode) {
-                body.classList.remove('large-mode');
-                btn.textContent = '放大';
-                isLargeMode = false;
-            } else {
-                body.classList.add('large-mode');
-                btn.textContent = '紧凑';
-                isLargeMode = true;
-            }
-        }
-
         function toggleFullscreen() {
             const btn = document.getElementById('fullscreen-btn');
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen().then(() => {
-                    btn.textContent = '退出';
+                    btn.textContent = '⛌';
                 }).catch(err => {
                     console.log('全屏失败:', err);
                 });
             } else {
                 document.exitFullscreen().then(() => {
-                    btn.textContent = '全屏';
+                    btn.textContent = '⛶';
                 });
             }
         }
 
         document.addEventListener('fullscreenchange', () => {
             const btn = document.getElementById('fullscreen-btn');
-            btn.textContent = document.fullscreenElement ? '退出' : '全屏';
+            btn.textContent = document.fullscreenElement ? '⛌' : '⛶';
         });
 
         function sendText() {
@@ -1724,6 +1782,148 @@
         });
 
         resetAutoFocusTimer();
+
+        // ===== 截屏功能 =====
+        const screenshotModal = document.getElementById('screenshot-modal');
+        const screenshotImg = document.getElementById('screenshot-img');
+        const screenshotLoading = document.getElementById('screenshot-loading');
+
+        // 双指缩放相关变量
+        let currentScale = 1;
+        let initialDistance = 0;
+        let initialScale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let lastPosX = 0;
+        let lastPosY = 0;
+        let isDragging = false;
+
+        function takeScreenshot() {
+            screenshotModal.classList.add('show');
+            screenshotImg.style.display = 'none';
+            screenshotLoading.style.display = 'block';
+            screenshotLoading.textContent = '正在截屏...';
+            resetTransform();
+
+            fetch('/screenshot')
+                .then(r => {
+                    if (!r.ok) throw new Error('截屏失败');
+                    return r.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    screenshotImg.onload = () => {
+                        screenshotLoading.style.display = 'none';
+                        screenshotImg.style.display = 'block';
+                    };
+                    screenshotImg.src = url;
+                })
+                .catch(err => {
+                    screenshotLoading.textContent = '截屏失败: ' + err.message;
+                });
+        }
+
+        function refreshScreenshot() {
+            screenshotImg.style.display = 'none';
+            screenshotLoading.style.display = 'block';
+            screenshotLoading.textContent = '正在刷新...';
+            resetTransform();
+
+            fetch('/screenshot')
+                .then(r => {
+                    if (!r.ok) throw new Error('截屏失败');
+                    return r.blob();
+                })
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    screenshotImg.onload = () => {
+                        screenshotLoading.style.display = 'none';
+                        screenshotImg.style.display = 'block';
+                    };
+                    screenshotImg.src = url;
+                })
+                .catch(err => {
+                    screenshotLoading.textContent = '截屏失败: ' + err.message;
+                });
+        }
+
+        function closeScreenshot() {
+            screenshotModal.classList.remove('show');
+            resetTransform();
+        }
+
+        function resetTransform() {
+            currentScale = 1;
+            translateX = 0;
+            translateY = 0;
+            screenshotImg.style.transform = 'scale(1) translate(0, 0)';
+        }
+
+        function updateTransform() {
+            screenshotImg.style.transform = `scale(${currentScale}) translate(${translateX}px, ${translateY}px)`;
+        }
+
+        function getDistance(touches) {
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // 触摸事件处理
+        screenshotModal.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                initialDistance = getDistance(e.touches);
+                initialScale = currentScale;
+            } else if (e.touches.length === 1 && currentScale > 1) {
+                isDragging = true;
+                lastPosX = e.touches[0].clientX;
+                lastPosY = e.touches[0].clientY;
+            }
+        }, { passive: false });
+
+        screenshotModal.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const distance = getDistance(e.touches);
+                const scale = initialScale * (distance / initialDistance);
+                currentScale = Math.min(Math.max(scale, 0.5), 5);
+                updateTransform();
+            } else if (e.touches.length === 1 && isDragging && currentScale > 1) {
+                e.preventDefault();
+                const deltaX = (e.touches[0].clientX - lastPosX) / currentScale;
+                const deltaY = (e.touches[0].clientY - lastPosY) / currentScale;
+                translateX += deltaX;
+                translateY += deltaY;
+                lastPosX = e.touches[0].clientX;
+                lastPosY = e.touches[0].clientY;
+                updateTransform();
+            }
+        }, { passive: false });
+
+        screenshotModal.addEventListener('touchend', function(e) {
+            if (e.touches.length < 2) {
+                initialDistance = 0;
+            }
+            if (e.touches.length === 0) {
+                isDragging = false;
+            }
+        });
+
+        // 双击重置缩放
+        let lastTapTimeScreenshot = 0;
+        screenshotImg.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTapTimeScreenshot < 300 && e.touches.length === 0) {
+                if (currentScale > 1) {
+                    resetTransform();
+                } else {
+                    currentScale = 2;
+                    updateTransform();
+                }
+            }
+            lastTapTimeScreenshot = now;
+        });
     </script>
 </body>
 

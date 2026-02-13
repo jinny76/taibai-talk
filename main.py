@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, session, redirect, url_for
+from flask import Flask, request, render_template, jsonify, session, redirect, url_for, Response
 import pyautogui
 import pyperclip
 import socket
@@ -8,6 +8,7 @@ import time
 import sys
 import argparse
 import secrets
+import io
 # 新增：导入二维码生成库
 import qrcode
 from qrcode.console_scripts import main as qr_main
@@ -353,6 +354,22 @@ def mouse_click():
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "failed", "msg": str(e)})
+
+@app.route('/screenshot')
+def screenshot():
+    """截取当前屏幕并返回 JPEG 图片"""
+    try:
+        # 截取屏幕
+        img = pyautogui.screenshot()
+        # 转换为 JPEG 格式（比 PNG 小很多，传输更快）
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG', quality=75)
+        buffer.seek(0)
+        print("截屏成功")
+        return Response(buffer.getvalue(), mimetype='image/jpeg')
+    except Exception as e:
+        print(f"截屏失败：{e}")
+        return jsonify({"status": "failed", "msg": str(e)}), 500
 
 @app.route('/undo', methods=['POST'])
 def undo_last():
