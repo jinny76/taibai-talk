@@ -228,6 +228,51 @@ def get_options():
     """获取命令和常用语配置"""
     return jsonify({"commands": COMMANDS, "phrases": PHRASES})
 
+@app.route('/save_options', methods=['POST'])
+def save_options():
+    """保存命令和常用语配置到文件"""
+    global COMMANDS, PHRASES
+    data = request.get_json()
+    commands = data.get('commands', [])
+    phrases = data.get('phrases', [])
+
+    # 确定配置文件目录
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+    else:
+        exe_dir = os.path.dirname(os.path.abspath(__file__))
+
+    try:
+        # 保存命令列表
+        cmd_file = os.path.join(exe_dir, "commands.txt")
+        with open(cmd_file, 'w', encoding='utf-8') as f:
+            f.write("# Claude Code 常用命令和热键\n")
+            f.write("# 每行一个命令，#开头为注释\n")
+            f.write("# [KEY] 前缀表示热键，会直接发送按键而非文本\n\n")
+            for cmd in commands:
+                if cmd.strip():
+                    f.write(cmd.strip() + '\n')
+
+        # 保存常用语列表
+        phrase_file = os.path.join(exe_dir, "phrases.txt")
+        with open(phrase_file, 'w', encoding='utf-8') as f:
+            f.write("# 常用语配置文件 - Vibe Coding 专用\n")
+            f.write("# 每行一个常用语，#开头为注释\n\n")
+            for phrase in phrases:
+                if phrase.strip():
+                    f.write(phrase.strip() + '\n')
+
+        # 重新加载配置
+        COMMANDS = [c.strip() for c in commands if c.strip()]
+        PHRASES = [p.strip() for p in phrases if p.strip()]
+
+        print(f"配置已保存：{len(COMMANDS)} 条命令，{len(PHRASES)} 条常用语")
+        return jsonify({"status": "success"})
+
+    except Exception as e:
+        print(f"保存配置失败：{e}")
+        return jsonify({"status": "failed", "msg": str(e)})
+
 @app.route('/send', methods=['POST'])
 def send_text():
     global LAST_OPERATION

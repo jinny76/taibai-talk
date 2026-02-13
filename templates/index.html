@@ -613,9 +613,38 @@
             color: var(--gold-primary);
         }
 
+        /* Logo 菜单 */
+        .logo-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 1001;
+            min-width: 120px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+        .logo-menu.show { display: block; }
+        .logo-menu-item {
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.15s;
+        }
+        .logo-menu-item:last-child { border-bottom: none; }
+        .logo-menu-item:hover { background: var(--bg-input); }
+        .logo-menu-item:active { background: var(--gold-dark); }
+
         /* Modal */
         #symbol-modal,
-        #about-modal {
+        #about-modal,
+        #settings-modal {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.85);
@@ -634,6 +663,78 @@
             padding: 28px;
             border: 1px solid var(--border-color);
         }
+
+        /* 设定弹窗特殊样式 */
+        #settings-modal .modal-box {
+            max-width: 450px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        .settings-section:last-child { margin-bottom: 0; }
+        .settings-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .settings-row label {
+            color: var(--text-primary);
+            font-size: 14px;
+            flex: 1;
+        }
+        .settings-textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        .settings-textarea:focus {
+            outline: none;
+            border-color: var(--gold-primary);
+        }
+        .settings-textarea::placeholder { color: var(--text-muted); }
+        .settings-hint {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-top: 6px;
+        }
+        .settings-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .settings-buttons .btn {
+            flex: 1;
+        }
+        .btn-save {
+            background: var(--gold-primary);
+            color: var(--bg-primary);
+            font-weight: 600;
+        }
+        .btn-save:hover { background: var(--gold-light); }
+        .btn-cancel {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-cancel:hover { border-color: var(--border-hover); }
 
         .modal-title {
             color: var(--text-primary);
@@ -688,12 +789,16 @@
 
 <body>
     <div class="header">
-        <div class="logo">
-            <div class="logo-icon" onclick="showAbout()" style="cursor:pointer;">
+        <div class="logo" style="position:relative;">
+            <div class="logo-icon" onclick="toggleLogoMenu(event)" style="cursor:pointer;">
                 <svg viewBox="0 0 24 24">
                     <path
                         d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                 </svg>
+            </div>
+            <div class="logo-menu" id="logo-menu">
+                <div class="logo-menu-item" onclick="showSettings()">⚙️ 设定</div>
+                <div class="logo-menu-item" onclick="showAbout()">ℹ️ 关于</div>
             </div>
             <span class="logo-text">太白说</span>
             <span class="status-indicator" id="status-indicator" title="连接状态"></span>
@@ -806,6 +911,48 @@
                 taibai.kingfisher.live
             </a>
             <p style="color:var(--text-muted);font-size:11px;margin-top:20px;">v1.0</p>
+        </div>
+    </div>
+
+    <div id="settings-modal">
+        <div class="modal-box">
+            <div class="modal-title">设定</div>
+
+            <div class="settings-section">
+                <div class="settings-label">自动发送</div>
+                <div class="settings-row">
+                    <label>启用自动发送</label>
+                    <span class="toggle-switch">
+                        <input type="checkbox" id="settings-auto-send">
+                        <span class="toggle-slider"></span>
+                    </span>
+                </div>
+                <div class="settings-row">
+                    <label>延迟时间</label>
+                    <select class="delay-select" id="settings-delay">
+                        <option value="1000">1秒</option>
+                        <option value="2000">2秒</option>
+                        <option value="3000">3秒</option>
+                        <option value="5000">5秒</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-label">命令列表</div>
+                <textarea class="settings-textarea" id="settings-commands" placeholder="每行一个命令..."></textarea>
+                <div class="settings-hint">[KEY] 前缀表示热键，如 [KEY]Ctrl+C</div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-label">常用语列表</div>
+                <textarea class="settings-textarea" id="settings-phrases" placeholder="每行一个常用语..."></textarea>
+            </div>
+
+            <div class="settings-buttons">
+                <button class="btn btn-cancel" onclick="closeSettings()">取消</button>
+                <button class="btn btn-save" onclick="saveSettings()">保存</button>
+            </div>
         </div>
     </div>
 
@@ -1411,11 +1558,81 @@
             if (e.target === this) this.style.display = 'none';
         });
 
+        // ===== Logo 菜单 =====
+        const logoMenu = document.getElementById('logo-menu');
+        function toggleLogoMenu(e) {
+            e.stopPropagation();
+            logoMenu.classList.toggle('show');
+        }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.logo')) {
+                logoMenu.classList.remove('show');
+            }
+        });
+
+        // ===== 关于弹窗 =====
         function showAbout() {
+            logoMenu.classList.remove('show');
             document.getElementById('about-modal').style.display = 'flex';
         }
         document.getElementById('about-modal').addEventListener('click', function (e) {
             if (e.target === this) this.style.display = 'none';
+        });
+
+        // ===== 设定弹窗 =====
+        const settingsModal = document.getElementById('settings-modal');
+        const settingsAutoSend = document.getElementById('settings-auto-send');
+        const settingsDelay = document.getElementById('settings-delay');
+        const settingsCommands = document.getElementById('settings-commands');
+        const settingsPhrases = document.getElementById('settings-phrases');
+
+        function showSettings() {
+            logoMenu.classList.remove('show');
+            // 加载当前设置
+            settingsAutoSend.checked = autoSendToggle.checked;
+            settingsDelay.value = delaySelect.value;
+            // 加载命令和常用语（从服务器获取最新）
+            fetch('/get_options').then(r => r.json()).then(data => {
+                settingsCommands.value = data.commands.join('\n');
+                settingsPhrases.value = data.phrases.join('\n');
+            });
+            settingsModal.style.display = 'flex';
+        }
+
+        function closeSettings() {
+            settingsModal.style.display = 'none';
+        }
+
+        function saveSettings() {
+            // 保存自动发送设置到本地
+            autoSendToggle.checked = settingsAutoSend.checked;
+            delaySelect.value = settingsDelay.value;
+            localStorage.setItem('taibai_auto_send', settingsAutoSend.checked ? '1' : '0');
+            localStorage.setItem('taibai_auto_delay', settingsDelay.value);
+
+            // 保存命令和常用语到服务器
+            const commands = settingsCommands.value.split('\n').filter(l => l.trim());
+            const phrases = settingsPhrases.value.split('\n').filter(l => l.trim());
+
+            fetch('/save_options', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commands, phrases })
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'success') {
+                    // 重新加载下拉菜单
+                    loadOptions();
+                    closeSettings();
+                } else {
+                    alert('保存失败: ' + (data.msg || '未知错误'));
+                }
+            }).catch(err => {
+                alert('保存失败: ' + err);
+            });
+        }
+
+        settingsModal.addEventListener('click', function (e) {
+            if (e.target === this) closeSettings();
         });
 
         document.getElementById('input-box').addEventListener('keydown', function (e) {
