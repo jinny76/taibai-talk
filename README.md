@@ -116,3 +116,6 @@ python main.py -p 57777 --url https://your-domain.com --password yourpassword
 - pyautogui - 模拟键盘鼠标操作
 - pyperclip - 剪贴板管理
 - qrcode - 二维码生成
+
+## 致谢
+本项目最初基于 [ChaserSu/DBInputSync](https://github.com/ChaserSu/DBInputSync) 开发。

@@ -837,7 +837,8 @@ HTML_TEMPLATE = '''
             <p style="color:var(--text-muted);font-size:12px;margin-bottom:20px;">
                 语音转文字 · 触控板 · 热键控制
             </p>
-            <a href="https://taibai.kingfisher.live" target="_blank"
+            <a href="https://taibai.kingfisher.live" target="_blank" rel="noopener"
+               onclick="event.stopPropagation(); window.open('https://taibai.kingfisher.live', '_blank');"
                style="display:inline-block;padding:10px 24px;background:var(--gold-primary);color:var(--bg-primary);border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
                 taibai.kingfisher.live
             </a>
@@ -1511,10 +1512,12 @@ HTML_TEMPLATE = '''
         const AUTO_FOCUS_SECONDS = 5; // 5秒
 
         function shouldAutoFocus() {
-            const modal = document.getElementById('symbol-modal');
-            const isModalOpen = modal && modal.style.display === 'flex';
+            const symbolModal = document.getElementById('symbol-modal');
+            const aboutModal = document.getElementById('about-modal');
+            const isSymbolModalOpen = symbolModal && symbolModal.style.display === 'flex';
+            const isAboutModalOpen = aboutModal && aboutModal.style.display === 'flex';
             const isDropdownOpen = activeDropdown !== null;
-            return !isTouchpadMode && document.activeElement !== inputBox && !isModalOpen && !isDropdownOpen;
+            return !isTouchpadMode && document.activeElement !== inputBox && !isSymbolModalOpen && !isAboutModalOpen && !isDropdownOpen;
         }
 
         function clearAutoFocusTimer() {
