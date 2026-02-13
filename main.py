@@ -332,6 +332,17 @@ HTML_TEMPLATE = '''
         }
         .delay-select:focus { outline: none; border-color: var(--gold-primary); }
         .delay-select option { background: var(--bg-card); color: var(--text-primary); }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        .status-indicator.connected { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+        .status-indicator.disconnected { background: #f87171; box-shadow: 0 0 6px #f87171; }
+        .status-indicator.auth-required { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
         .countdown-indicator {
             padding: 4px 10px;
             background: var(--gold-dark);
@@ -739,6 +750,7 @@ HTML_TEMPLATE = '''
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </div>
             <span class="logo-text">太白说</span>
+            <span class="status-indicator" id="status-indicator" title="连接状态"></span>
             <span class="countdown-indicator" id="countdown">3s</span>
         </div>
         <button id="mode-btn" onclick="toggleMode()">放大</button>
@@ -860,6 +872,65 @@ HTML_TEMPLATE = '''
         let countdownTimer = null;
         let countdownValue = 0;
         let isTouchpadMode = false;
+
+        // ===== 健康检测：定期检查连接状态 =====
+        const statusIndicator = document.getElementById('status-indicator');
+        let healthCheckInterval = null;
+
+        function updateStatus(status) {
+            statusIndicator.className = 'status-indicator ' + status;
+            if (status === 'connected') {
+                statusIndicator.title = '已连接';
+            } else if (status === 'disconnected') {
+                statusIndicator.title = '连接断开';
+            } else if (status === 'auth-required') {
+                statusIndicator.title = '需要重新登录';
+            }
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health', { method: 'GET' });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.authenticated) {
+                        updateStatus('connected');
+                    } else {
+                        updateStatus('auth-required');
+                        // 需要重新登录，刷新页面
+                        if (confirm('登录已过期，需要重新登录')) {
+                            location.reload();
+                        }
+                    }
+                } else {
+                    updateStatus('disconnected');
+                }
+            } catch (e) {
+                updateStatus('disconnected');
+            }
+        }
+
+        // 封装 fetch，自动处理 401 错误
+        async function apiFetch(url, options = {}) {
+            try {
+                const response = await fetch(url, options);
+                if (response.status === 401) {
+                    updateStatus('auth-required');
+                    alert('登录已过期，请重新登录');
+                    location.reload();
+                    return null;
+                }
+                updateStatus('connected');
+                return response;
+            } catch (e) {
+                updateStatus('disconnected');
+                throw e;
+            }
+        }
+
+        // 启动健康检测（每 10 秒检测一次）
+        checkHealth();
+        healthCheckInterval = setInterval(checkHealth, 10000);
 
         // 触控板相关
         const touchpad = document.getElementById('touchpad');
@@ -1329,10 +1400,20 @@ HTML_TEMPLATE = '''
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({text: text})
-            }).then(() => {
+            }).then(response => {
+                if (response.status === 401) {
+                    updateStatus('auth-required');
+                    alert('登录已过期，请重新登录');
+                    location.reload();
+                    return;
+                }
+                updateStatus('connected');
                 hasHistory = true;
                 updateUndoBtn();
                 document.getElementById('input-box').value = '';
+            }).catch(e => {
+                updateStatus('disconnected');
+                alert('发送失败，请检查连接');
             });
         }
 
@@ -1800,9 +1881,9 @@ def check_auth():
 
 @app.before_request
 def require_auth():
-    """所有 API 请求都需要认证（除了首页和登录接口）"""
+    """所有 API 请求都需要认证（除了首页、登录和健康检测接口）"""
     # 不需要认证的路由
-    public_routes = ['/', '/auth']
+    public_routes = ['/', '/auth', '/health']
     if request.path in public_routes:
         return None
     # 检查认证
@@ -1810,6 +1891,11 @@ def require_auth():
         return jsonify({"status": "unauthorized", "msg": "请先登录"}), 401
 
 # ------------ 原有接口部分 ------------
+@app.route('/health')
+def health():
+    """健康检测端点，不需要认证"""
+    return jsonify({"status": "ok", "authenticated": check_auth()})
+
 @app.route('/')
 def index():
     if not check_auth():
@@ -1956,6 +2042,43 @@ def undo_last():
     })
 
 def get_local_ip():
+    """获取本机局域网 IP，优先级：192.168.x.x > 10.x.x.x > 172.x.x.x"""
+    import subprocess
+    try:
+        # Windows: 使用 ipconfig 获取所有 IP
+        result = subprocess.run(['ipconfig'], capture_output=True, text=True, encoding='gbk', errors='ignore')
+        lines = result.stdout.split('\n')
+
+        ips_192 = []  # 192.168.x.x
+        ips_10 = []   # 10.x.x.x
+        ips_172 = []  # 172.16-31.x.x
+
+        for line in lines:
+            if 'IPv4' in line or 'IP Address' in line:
+                parts = line.split(':')
+                if len(parts) >= 2:
+                    ip = parts[-1].strip()
+                    if ip.startswith('192.168.'):
+                        ips_192.append(ip)
+                    elif ip.startswith('10.'):
+                        ips_10.append(ip)
+                    elif ip.startswith('172.'):
+                        # 检查是否在 172.16.0.0 - 172.31.255.255 范围
+                        second_octet = int(ip.split('.')[1])
+                        if 16 <= second_octet <= 31:
+                            ips_172.append(ip)
+
+        # 按优先级返回
+        if ips_192:
+            return ips_192[0]
+        if ips_10:
+            return ips_10[0]
+        if ips_172:
+            return ips_172[0]
+    except Exception:
+        pass
+
+    # Fallback: 使用 socket 方法
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(('8.8.8.8', 80))
@@ -1976,7 +2099,7 @@ def generate_cli_qrcode(url):
 if __name__ == '__main__':
     # 命令行参数解析
     parser = argparse.ArgumentParser(description='太白说 - 手机输入同步到电脑')
-    parser.add_argument('-p', '--port', type=int, default=5000, help='服务端口号 (默认: 5000)')
+    parser.add_argument('-p', '--port', type=int, default=57777, help='服务端口号 (默认: 57777)')
     parser.add_argument('--host', type=str, default='0.0.0.0', help='监听地址 (默认: 0.0.0.0)')
     parser.add_argument('--url', type=str, default=None, help='外部访问地址 (用于反向代理，如: https://example.com)')
     parser.add_argument('--password', type=str, default=None, help='访问密码 (不设置则无需验证)')
@@ -2008,5 +2131,11 @@ if __name__ == '__main__':
         print(f"使用外部地址模式（反向代理）")
     else:
         print(f"注意：手机和电脑需在同一局域网下")
+
+    # 打包版本禁用 HTTP 请求日志
+    if getattr(sys, 'frozen', False):
+        import logging
+        log = logging.getLogger('werkzeug')
+        log.setLevel(logging.ERROR)
 
     app.run(host=args.host, port=port, debug=False, threaded=True)
