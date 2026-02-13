@@ -13,6 +13,7 @@ a = Analysis(
         ('hot-rule.txt', '.'),
         ('commands.txt', '.'),
         ('phrases.txt', '.'),
+        ('icon.ico', '.'),
         # HTML 模板文件
         ('templates', 'templates'),
     ],

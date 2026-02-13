@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, jsonify, session, redirect, url_for, Response
+from flask import Flask, request, render_template, jsonify, session, redirect, url_for, Response, send_file
 import pyautogui
 import pyperclip
 import socket
@@ -168,9 +168,9 @@ def check_auth():
 
 @app.before_request
 def require_auth():
-    """所有 API 请求都需要认证（除了首页、登录和健康检测接口）"""
+    """所有 API 请求都需要认证（除了首页、登录、健康检测和图标接口）"""
     # 不需要认证的路由
-    public_routes = ['/', '/auth', '/health']
+    public_routes = ['/', '/auth', '/health', '/favicon.ico']
     if request.path in public_routes:
         return None
     # 检查认证
@@ -178,6 +178,15 @@ def require_auth():
         return jsonify({"status": "unauthorized", "msg": "请先登录"}), 401
 
 # ------------ 原有接口部分 ------------
+@app.route('/favicon.ico')
+def favicon():
+    """网站图标"""
+    if getattr(sys, 'frozen', False):
+        icon_path = os.path.join(os.path.dirname(sys.executable), 'icon.ico')
+    else:
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon.ico')
+    return send_file(icon_path, mimetype='image/x-icon')
+
 @app.route('/health')
 def health():
     """健康检测端点，不需要认证"""
