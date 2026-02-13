@@ -182,7 +182,7 @@ HTML_TEMPLATE = '''
             padding: 20px 15px 40px;
             --btn-gap: 10px;
             --btn-radius: 8px;
-            --input-height: 160px;
+            --input-height: 120px;
             --btn-font: 1rem;
             --btn-padding: 14px 12px;
         }
@@ -667,7 +667,7 @@ HTML_TEMPLATE = '''
             color: var(--gold-primary);
         }
         /* Modal */
-        #symbol-modal {
+        #symbol-modal, #about-modal {
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.85);
@@ -729,7 +729,7 @@ HTML_TEMPLATE = '''
 <body>
     <div class="header">
         <div class="logo">
-            <div class="logo-icon">
+            <div class="logo-icon" onclick="showAbout()" style="cursor:pointer;">
                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </div>
             <span class="logo-text">太白说</span>
@@ -825,6 +825,23 @@ HTML_TEMPLATE = '''
             <div class="modal-title">输入内容</div>
             <input type="text" id="symbol-input" placeholder="输入要包裹的文字...">
             <button id="confirm-symbol" onclick="confirmSymbol()">确认</button>
+        </div>
+    </div>
+
+    <div id="about-modal">
+        <div class="modal-box" style="text-align:center;">
+            <div class="modal-title" style="font-size:20px;margin-bottom:8px;">太白说</div>
+            <p style="color:var(--gold-primary);font-size:15px;margin-bottom:8px;font-weight:500;">程序员の躺平神器</p>
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">躺在人体工学椅上写代码</p>
+            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:8px;">手机语音输入 · 电脑实时上屏</p>
+            <p style="color:var(--text-muted);font-size:12px;margin-bottom:20px;">
+                语音转文字 · 触控板 · 热键控制
+            </p>
+            <a href="https://taibai.kingfisher.live" target="_blank"
+               style="display:inline-block;padding:10px 24px;background:var(--gold-primary);color:var(--bg-primary);border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;">
+                taibai.kingfisher.live
+            </a>
+            <p style="color:var(--text-muted);font-size:11px;margin-top:20px;">v1.0</p>
         </div>
     </div>
 
@@ -1444,6 +1461,14 @@ HTML_TEMPLATE = '''
             if (e.target === this) this.style.display = 'none';
         });
 
+        // 关于弹窗
+        function showAbout() {
+            document.getElementById('about-modal').style.display = 'flex';
+        }
+        document.getElementById('about-modal').addEventListener('click', function(e) {
+            if (e.target === this) this.style.display = 'none';
+        });
+
         document.getElementById('input-box').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -1478,6 +1503,64 @@ HTML_TEMPLATE = '''
                 delaySelect.value = savedDelay;
             }
         })();
+
+        // ===== 自动聚焦：无操作后倒计时聚焦输入框 =====
+        let autoFocusTimer = null;
+        let autoFocusCountdownTimer = null;
+        let autoFocusCountdown = 0;
+        const AUTO_FOCUS_SECONDS = 5; // 5秒
+
+        function shouldAutoFocus() {
+            const modal = document.getElementById('symbol-modal');
+            const isModalOpen = modal && modal.style.display === 'flex';
+            const isDropdownOpen = activeDropdown !== null;
+            return !isTouchpadMode && document.activeElement !== inputBox && !isModalOpen && !isDropdownOpen;
+        }
+
+        function clearAutoFocusTimer() {
+            if (autoFocusTimer) { clearTimeout(autoFocusTimer); autoFocusTimer = null; }
+            if (autoFocusCountdownTimer) { clearInterval(autoFocusCountdownTimer); autoFocusCountdownTimer = null; }
+            // 只有在没有自动发送倒计时时才隐藏
+            if (!autoSendTimer) {
+                countdownEl.classList.remove('active');
+            }
+        }
+
+        function resetAutoFocusTimer() {
+            clearAutoFocusTimer();
+            // 如果已经聚焦或不应该自动聚焦，不启动定时器
+            if (!shouldAutoFocus()) return;
+
+            autoFocusCountdown = AUTO_FOCUS_SECONDS;
+
+            // 延迟1秒后开始显示倒计时（避免短暂操作也显示）
+            autoFocusTimer = setTimeout(() => {
+                if (!shouldAutoFocus()) return;
+
+                countdownEl.textContent = autoFocusCountdown + 's';
+                countdownEl.classList.add('active');
+
+                autoFocusCountdownTimer = setInterval(() => {
+                    autoFocusCountdown--;
+                    if (autoFocusCountdown > 0) {
+                        countdownEl.textContent = autoFocusCountdown + 's';
+                    } else {
+                        clearAutoFocusTimer();
+                        if (shouldAutoFocus()) {
+                            inputBox.focus();
+                        }
+                    }
+                }, 1000);
+            }, 1000);
+        }
+
+        // 监听用户活动，重置定时器
+        ['touchstart', 'touchmove', 'click', 'keydown', 'input'].forEach(evt => {
+            document.addEventListener(evt, resetAutoFocusTimer, {passive: true});
+        });
+
+        // 页面加载时启动定时器
+        resetAutoFocusTimer();
     </script>
 </body>
 </html>

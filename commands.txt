@@ -24,6 +24,7 @@
 /think
 
 # === 终端热键 ===
+[KEY]Escape
 [KEY]Ctrl+C
 [KEY]Ctrl+D
 [KEY]Ctrl+Z
