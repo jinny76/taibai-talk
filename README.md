@@ -2,9 +2,9 @@
 
 # 太白说 TaiBai Talk
 
-**程序员の躺平神器** 🛋️
+**Vibe Coding 标准装备** 🛋️
 
-*躺在人体工学椅上写代码*
+*躺在人体工学椅上，用语音写代码*
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-2.3-green.svg)](https://flask.palletsprojects.com)
@@ -16,7 +16,22 @@
 
 ---
 
-> 🎯 **手机语音输入，电脑实时上屏** — 让疲惫的程序员躺着也能敲代码
+## 什么是 Vibe Coding？
+
+**Vibe Coding** 是 AI 时代的新型开发方式：
+
+> 🎯 **躺着 + 语音 + AI = 高效编程**
+
+- 👨‍💻 你躺在人体工学椅上，眼睛盯着屏幕
+- 🗣️ 用手机语音输入，告诉 AI 你想要什么
+- 🤖 AI（如 Claude Code）自动生成代码、执行命令
+- 📱 用太白说发送指令、切换标签、查看截屏
+
+**太白说**正是为 Vibe Coding 而生的工具！
+
+---
+
+> 🎯 **手机语音输入，电脑实时上屏** — 让程序员躺着也能高效写代码
 
 你是否曾经：
 - 😫 长时间打字手腕酸痛，想躺下休息但还要继续写代码？
@@ -82,6 +97,7 @@ build.bat         # CMD
 
 ## 使用场景
 
+- 🤖 **Vibe Coding** - 躺着用语音指挥 AI 写代码（推荐搭配 Claude Code）
 - 💻 **写代码** - 语音输入注释、日志、字符串
 - 📝 **写文档** - 躺着口述，电脑记录
 - 💬 **回复消息** - 远程输入聊天内容
@@ -159,7 +175,7 @@ build.bat         # CMD
 
 <div align="center">
 
-**躺着，也能优雅地写代码** 🛋️✨
+**Vibe Coding — 躺着，也能优雅地写代码** 🛋️✨
 
 Made with ❤️ by [jinny76](https://github.com/jinny76)
 
