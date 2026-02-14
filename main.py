@@ -13,13 +13,15 @@ import io
 import qrcode
 from qrcode.console_scripts import main as qr_main
 
-# 处理 PyInstaller 打包时的模板路径
+# 处理 PyInstaller 打包时的路径
 if getattr(sys, 'frozen', False):
-    # 打包后：模板在 exe 同目录下的 templates 文件夹
-    template_folder = os.path.join(os.path.dirname(sys.executable), 'templates')
+    # 打包后：模板和静态资源在 _MEIPASS 临时目录
+    BASE_PATH = sys._MEIPASS
+    template_folder = os.path.join(BASE_PATH, 'templates')
 else:
-    # 开发环境：使用默认的 templates 文件夹
-    template_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+    # 开发环境
+    BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+    template_folder = os.path.join(BASE_PATH, 'templates')
 
 app = Flask(__name__, template_folder=template_folder)
 app.secret_key = secrets.token_hex(16)  # 用于 session 加密
@@ -181,10 +183,7 @@ def require_auth():
 @app.route('/favicon.ico')
 def favicon():
     """网站图标"""
-    if getattr(sys, 'frozen', False):
-        icon_path = os.path.join(os.path.dirname(sys.executable), 'icon.ico')
-    else:
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'icon.ico')
+    icon_path = os.path.join(BASE_PATH, 'icon.ico')
     return send_file(icon_path, mimetype='image/x-icon')
 
 @app.route('/health')
