@@ -79,12 +79,38 @@ pip install -r requirement.txt
 python main.py
 ```
 
-### 带密码启动
+### 命令行参数
+
 ```bash
+# 基本启动
+python main.py
+
+# 指定端口（默认 57777）
+python main.py -p 8888
+
+# 带密码保护
 python main.py --password yourpassword
-# 或
-太白说.exe --password yourpassword
+
+# 指定监听地址（默认 0.0.0.0）
+python main.py --host 127.0.0.1
+
+# 外部 URL（用于反向代理/内网穿透）
+python main.py --url https://your-domain.com
+
+# 不显示二维码
+python main.py --no-qrcode
+
+# 组合使用
+python main.py -p 8888 --password mypass --url https://example.com
 ```
+
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `-p, --port` | 服务端口号 | 57777 |
+| `--host` | 监听地址 | 0.0.0.0 |
+| `--password` | 访问密码（不设则无需验证） | 无 |
+| `--url` | 外部访问地址（用于反向代理） | 无 |
+| `--no-qrcode` | 不在终端显示二维码 | 显示 |
 
 ### 自行打包 EXE
 
