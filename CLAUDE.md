@@ -39,9 +39,14 @@ python main.py -p 5000 --host 0.0.0.0 --url https://your-domain.com --password y
 - **剪贴板**：pyperclip 处理中文粘贴
 - **二维码**：qrcode_terminal 在终端显示二维码
 
-### 前端（内嵌 HTML/CSS/JS）
-- 响应式移动端界面，内嵌在 `HTML_TEMPLATE` 和 `LOGIN_TEMPLATE` 变量中
+### 前端（templates 目录）
+- 响应式移动端界面，模板文件位于 `templates/` 目录
+- `index.html`：主界面
+- `login.html`：密码登录页面
 - 触控板模式：全屏触控区域，支持鼠标移动和点击手势
+- 截屏查看：支持双指缩放（0.5x ~ 5x）和拖动
+- 快捷操作栏：Tab 切换、继续、ESC、回滚、新任务、编译、提交
+- 设定弹窗：Logo 点击可编辑自动发送、命令列表、常用语列表
 - 自定义下拉框：命令、常用语、历史记录菜单
 - 长按重复：方向键和热键支持长按连续触发
 
@@ -55,9 +60,13 @@ python main.py -p 5000 --host 0.0.0.0 --url https://your-domain.com --password y
 | `/delete_pc` | POST | 退格删除 |
 | `/mouse_move` | POST | 鼠标相对移动 |
 | `/mouse_click` | POST | 鼠标点击 |
+| `/screenshot` | GET | 截取屏幕返回 JPEG 图片 |
 | `/undo` | POST | 撤销上次操作 |
 | `/auth` | POST | 密码验证 |
 | `/get_options` | GET | 获取命令和常用语配置 |
+| `/save_options` | POST | 保存命令和常用语配置 |
+| `/favicon.ico` | GET | 网站图标 |
+| `/health` | GET | 健康检测端点 |
 
 ## 配置文件
 
