@@ -351,6 +351,32 @@ def mouse_move():
     except Exception as e:
         return jsonify({"status": "failed", "msg": str(e)})
 
+@app.route('/mouse_move_to', methods=['POST'])
+def mouse_move_to():
+    """移动鼠标到绝对位置"""
+    data = request.get_json()
+    x = data.get('x', 0)
+    y = data.get('y', 0)
+    try:
+        # 获取屏幕尺寸，确保坐标在范围内
+        screen_width, screen_height = pyautogui.size()
+        x = max(0, min(x, screen_width - 1))
+        y = max(0, min(y, screen_height - 1))
+        pyautogui.moveTo(x, y, _pause=False)
+        print(f"鼠标移动到: ({x}, {y})")
+        return jsonify({"status": "success", "x": x, "y": y})
+    except Exception as e:
+        return jsonify({"status": "failed", "msg": str(e)})
+
+@app.route('/screen_size')
+def screen_size():
+    """获取屏幕尺寸"""
+    try:
+        width, height = pyautogui.size()
+        return jsonify({"width": width, "height": height})
+    except Exception as e:
+        return jsonify({"status": "failed", "msg": str(e)})
+
 @app.route('/mouse_click', methods=['POST'])
 def mouse_click():
     """鼠标点击"""

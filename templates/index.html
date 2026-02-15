@@ -962,14 +962,14 @@
         }
         .screenshot-panel .btn-row {
             display: flex;
-            gap: 6px;
-            margin-bottom: 6px;
+            gap: 4px;
+            margin-bottom: 4px;
         }
         .screenshot-panel .btn {
             flex: 1;
-            padding: 10px 8px;
+            padding: 6px 4px;
             font-size: 12px;
-            min-height: 36px;
+            min-height: 28px;
         }
         .screenshot-panel .quick-selects {
             display: flex;
@@ -1184,6 +1184,11 @@
                     <input type="text" class="mini-input" id="screenshot-input" placeholder="输入文字...">
                 </div>
                 <div class="btn-row">
+                    <button class="btn btn-clear" onclick="clearScreenshotInput()">清</button>
+                    <button class="btn btn-accent" onclick="sendScreenshotInput()">发送</button>
+                    <button class="btn btn-enter" onclick="sendScreenshotInputEnter()">回车</button>
+                </div>
+                <div class="btn-row">
                     <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
                     <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
                     <button class="btn btn-accent" onclick="quickSend('继续')">继续</button>
@@ -1206,10 +1211,12 @@
                         <button class="dropdown-toggle" onclick="toggleDropdown('history')">🕐</button>
                     </div>
                 </div>
-                <div class="btn-row" style="margin-top:6px;">
-                    <button class="btn btn-clear" onclick="clearScreenshotInput()">清空</button>
-                    <button class="btn btn-accent" onclick="sendScreenshotInput()">发送</button>
-                    <button class="btn btn-enter" onclick="sendScreenshotInputEnter()">回车</button>
+                <div class="btn-row" style="margin-top:4px;">
+                    <button class="btn btn-dir" onclick="moveCursor('left')">←</button>
+                    <button class="btn btn-dir" onclick="moveCursor('up')">↑</button>
+                    <button class="btn btn-dir" onclick="moveCursor('down')">↓</button>
+                    <button class="btn btn-dir" onclick="moveCursor('right')">→</button>
+                    <button class="btn btn-dir" onclick="sendDelete()">⌫</button>
                 </div>
             </div>
             <span id="screenshot-loading" class="screenshot-loading">正在截屏...</span>
@@ -1320,6 +1327,11 @@
             const touch = e.touches ? e.touches[0] : e;
             touchStartX = touch.clientX;
             touchStartY = touch.clientY;
+            // 远程模式下开始拖拽时启动快速刷新
+            const modal = document.getElementById('screenshot-modal');
+            if (modal && modal.classList.contains('show') && isTouchpadMode) {
+                startDragRefresh();
+            }
         }
 
         function handleTouchMove(e) {
@@ -1342,6 +1354,9 @@
 
         function handleTouchEnd(e) {
             if (!isTouching) return;
+
+            // 停止快速刷新
+            stopDragRefresh();
 
             // 如果刚刚切换了触控板模式，跳过点击处理
             if (Date.now() - lastToggleTime < 300) {
@@ -1367,16 +1382,32 @@
                     }
                 }
             }
-            // 移动后刷新截图
-            if (hasMoved) {
-                refreshScreenshotIfActive();
-            }
             isTouching = false;
             touchCount = 0;
         }
 
         let lastMoveTime = 0;
         const MOVE_THROTTLE = 16;
+
+        // 拖拽时快速刷新截图
+        let dragRefreshTimer = null;
+        const DRAG_REFRESH_INTERVAL = 300; // 拖拽时 300ms 刷新一次
+
+        function startDragRefresh() {
+            if (dragRefreshTimer) return;
+            dragRefreshTimer = setInterval(() => {
+                refreshScreenshotIfActive();
+            }, DRAG_REFRESH_INTERVAL);
+        }
+
+        function stopDragRefresh() {
+            if (dragRefreshTimer) {
+                clearInterval(dragRefreshTimer);
+                dragRefreshTimer = null;
+                // 停止后再刷新一次确保最新
+                refreshScreenshotIfActive();
+            }
+        }
 
         function isScreenshotLandscape() {
             // 检查是否在截图模式且竖屏（界面旋转了90度）
@@ -2043,6 +2074,25 @@
         let lastPosY = 0;
         let isDragging = false;
 
+        // 屏幕尺寸（用于精确点击）
+        let screenWidth = 1920;
+        let screenHeight = 1080;
+
+        // 获取屏幕尺寸
+        function fetchScreenSize() {
+            fetch('/screen_size')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.width && data.height) {
+                        screenWidth = data.width;
+                        screenHeight = data.height;
+                        console.log(`屏幕尺寸: ${screenWidth}x${screenHeight}`);
+                    }
+                })
+                .catch(() => {});
+        }
+        fetchScreenSize();
+
         function refreshScreenshotIfActive() {
             if (screenshotModal.classList.contains('show')) {
                 setTimeout(() => {
@@ -2271,6 +2321,135 @@
             }
             lastTapTimeScreenshot = now;
         });
+
+        // ===== 精确点击定位 =====
+        let imgTouchStart = null;
+        let imgTouchTime = 0;
+        let lastImgTapTime = 0;
+
+        function calculateScreenPosition(clientX, clientY) {
+            // 获取截图元素的实际渲染位置和尺寸
+            const rect = screenshotImg.getBoundingClientRect();
+
+            // 图片原始尺寸
+            const naturalW = screenshotImg.naturalWidth;
+            const naturalH = screenshotImg.naturalHeight;
+            if (!naturalW || !naturalH) return null;
+
+            // 点击相对于图片元素的位置
+            let clickX = clientX - rect.left;
+            let clickY = clientY - rect.top;
+
+            // 横屏模式下，界面旋转了90度，需要转换点击坐标
+            if (isScreenshotLandscape()) {
+                // rect 是旋转后的，但点击坐标是屏幕坐标
+                // 旋转90度后：原来的x变成y，原来的y变成(width-x)
+                const temp = clickX;
+                clickX = clickY;
+                clickY = rect.width - temp;
+            }
+
+            // 计算图片在 object-fit: contain 下的实际显示区域
+            const imgRatio = naturalW / naturalH;
+            const boxRatio = rect.width / rect.height;
+
+            let displayW, displayH, offsetX, offsetY;
+
+            if (isScreenshotLandscape()) {
+                // 横屏时 rect.width/height 是旋转后的值
+                const boxW = rect.height; // 实际显示宽度
+                const boxH = rect.width;  // 实际显示高度
+                const boxRatio2 = boxW / boxH;
+
+                if (imgRatio > boxRatio2) {
+                    displayW = boxW;
+                    displayH = boxW / imgRatio;
+                } else {
+                    displayH = boxH;
+                    displayW = boxH * imgRatio;
+                }
+                offsetX = (boxW - displayW) / 2;
+                offsetY = (boxH - displayH) / 2;
+            } else {
+                if (imgRatio > boxRatio) {
+                    displayW = rect.width;
+                    displayH = rect.width / imgRatio;
+                } else {
+                    displayH = rect.height;
+                    displayW = rect.height * imgRatio;
+                }
+                offsetX = (rect.width - displayW) / 2;
+                offsetY = (rect.height - displayH) / 2;
+            }
+
+            // 计算在图片内的相对位置
+            const imgX = clickX - offsetX;
+            const imgY = clickY - offsetY;
+
+            // 检查是否在图片范围内
+            if (imgX < 0 || imgX > displayW || imgY < 0 || imgY > displayH) {
+                console.log('点击在图片外');
+                return null;
+            }
+
+            // 计算对应的屏幕坐标
+            const screenX = Math.round((imgX / displayW) * naturalW);
+            const screenY = Math.round((imgY / displayH) * naturalH);
+
+            console.log(`点击位置: (${clientX}, ${clientY}) -> 图片内: (${imgX.toFixed(0)}, ${imgY.toFixed(0)}) -> 屏幕: (${screenX}, ${screenY})`);
+
+            return { x: screenX, y: screenY };
+        }
+
+        function clickAt(x, y) {
+            console.log(`点击位置: (${x}, ${y})`);
+            // 先移动，再点击
+            fetch('/mouse_move_to', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ x: x, y: y })
+            }).then(() => {
+                return fetch('/mouse_click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ button: 'left', clicks: 1 })
+                });
+            }).then(() => {
+                setTimeout(() => refreshScreenshotIfActive(), 100);
+            }).catch(err => console.log('点击失败:', err));
+        }
+
+        // 截图点击事件（非触控板模式下生效）
+        screenshotImg.addEventListener('touchstart', function(e) {
+            if (isTouchpadMode) return;
+            if (e.touches.length === 1) {
+                imgTouchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                imgTouchTime = Date.now();
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        screenshotImg.addEventListener('touchend', function(e) {
+            if (isTouchpadMode) return;
+            if (!imgTouchStart) return;
+
+            const duration = Date.now() - imgTouchTime;
+
+            // 长按不处理（可能是缩放）
+            if (duration > 500) {
+                imgTouchStart = null;
+                return;
+            }
+
+            const pos = calculateScreenPosition(imgTouchStart.x, imgTouchStart.y);
+            imgTouchStart = null;
+
+            if (!pos) return;
+
+            // 直接点击
+            clickAt(pos.x, pos.y);
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 
