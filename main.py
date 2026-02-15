@@ -7,6 +7,7 @@ import os
 import time
 import sys
 import argparse
+import threading
 import secrets
 import io
 # 新增：导入二维码生成库
@@ -488,6 +489,18 @@ import qrcode_terminal
 def generate_cli_qrcode(url):
     qrcode_terminal.draw(url)
 
+# 防锁屏：定期微移鼠标
+def keep_awake_loop(interval=60):
+    """后台线程：每隔 interval 秒微移鼠标防止锁屏"""
+    while True:
+        time.sleep(interval)
+        try:
+            x, y = pyautogui.position()
+            pyautogui.moveRel(1, 0, duration=0)
+            pyautogui.moveRel(-1, 0, duration=0)
+        except:
+            pass
+
 
 if __name__ == '__main__':
     # 命令行参数解析
@@ -497,6 +510,7 @@ if __name__ == '__main__':
     parser.add_argument('--url', type=str, default=None, help='外部访问地址 (用于反向代理，如: https://example.com)')
     parser.add_argument('--password', type=str, default=None, help='访问密码 (不设置则无需验证)')
     parser.add_argument('--no-qrcode', action='store_true', help='不显示二维码')
+    parser.add_argument('--keep-awake', type=int, default=0, metavar='SEC', help='防锁屏：每隔 N 秒微移鼠标 (0=禁用)')
     args = parser.parse_args()
 
     # 设置密码
@@ -524,6 +538,12 @@ if __name__ == '__main__':
         print(f"使用外部地址模式（反向代理）")
     else:
         print(f"注意：手机和电脑需在同一局域网下")
+
+    # 启动防锁屏线程
+    if args.keep_awake > 0:
+        awake_thread = threading.Thread(target=keep_awake_loop, args=(args.keep_awake,), daemon=True)
+        awake_thread.start()
+        print(f"防锁屏：已启用 (每 {args.keep_awake} 秒)")
 
     # 打包版本禁用 HTTP 请求日志
     if getattr(sys, 'frozen', False):
