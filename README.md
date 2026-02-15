@@ -6,7 +6,7 @@
 
 *躺平，但高效*
 
-<video src="https://github.com/jinny76/taibai-talk/raw/main/docs/taibai_talk.mp4" controls width="600"></video>
+https://github.com/user-attachments/assets/5a1a726a-b71f-454a-b8db-d5b7aa57475a
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-2.3-green.svg)](https://flask.palletsprojects.com)
