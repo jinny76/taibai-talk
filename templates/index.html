@@ -602,6 +602,17 @@
             color: var(--gold-primary);
         }
 
+        .btn-accent {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--gold-primary);
+        }
+
+        .btn-accent:hover {
+            border-color: var(--gold-primary);
+            color: var(--gold-light);
+        }
+
         /* 快捷操作栏 */
         .quick-actions-bar {
             display: flex;
@@ -901,14 +912,14 @@
         <div class="quick-actions-bar">
             <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Shift+Tab')">←Tab</button>
             <button class="btn btn-symbol" onclick="sendHotkey('Ctrl+Tab')">Tab→</button>
-            <button class="btn btn-send" onclick="quickSend('继续')">继续</button>
+            <button class="btn btn-accent" onclick="quickSend('继续')">继续</button>
             <button class="btn btn-symbol" onclick="sendHotkey('Escape')">ESC</button>
         </div>
         <div class="quick-actions-bar">
             <button class="btn btn-symbol" onclick="quickSend('回滚')">回滚</button>
-            <button class="btn btn-symbol" onclick="quickSend('/clear')">新任务</button>
+            <button class="btn btn-symbol" onclick="quickSend('/clear')">清空</button>
             <button class="btn btn-symbol" onclick="quickSend('编译')">编译</button>
-            <button class="btn btn-send" onclick="quickSend('提交')">提交</button>
+            <button class="btn btn-accent" onclick="quickSend('提交')">提交</button>
         </div>
 
         <div class="quick-selects">
@@ -929,7 +940,7 @@
         <div class="btn-section">
             <div class="btn-row">
                 <button class="btn btn-clear" onclick="clearInput()">清空</button>
-                <button class="btn btn-send" onclick="sendText()">发送</button>
+                <button class="btn btn-accent" onclick="sendText()">发送</button>
                 <button class="btn btn-enter" onclick="sendEnter()">回车</button>
             </div>
         </div>
@@ -1788,6 +1799,8 @@
         const screenshotModal = document.getElementById('screenshot-modal');
         const screenshotImg = document.getElementById('screenshot-img');
         const screenshotLoading = document.getElementById('screenshot-loading');
+        let screenshotAutoRefresh = null;
+        const SCREENSHOT_INTERVAL = 2000; // 2秒自动刷新
 
         // 双指缩放相关变量
         let currentScale = 1;
@@ -1816,12 +1829,36 @@
                     screenshotImg.onload = () => {
                         screenshotLoading.style.display = 'none';
                         screenshotImg.style.display = 'block';
+                        startScreenshotAutoRefresh();
                     };
                     screenshotImg.src = url;
                 })
                 .catch(err => {
                     screenshotLoading.textContent = '截屏失败: ' + err.message;
                 });
+        }
+
+        function startScreenshotAutoRefresh() {
+            stopScreenshotAutoRefresh();
+            screenshotAutoRefresh = setInterval(() => {
+                fetch('/screenshot')
+                    .then(r => {
+                        if (!r.ok) throw new Error('截屏失败');
+                        return r.blob();
+                    })
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        screenshotImg.src = url;
+                    })
+                    .catch(() => {});
+            }, SCREENSHOT_INTERVAL);
+        }
+
+        function stopScreenshotAutoRefresh() {
+            if (screenshotAutoRefresh) {
+                clearInterval(screenshotAutoRefresh);
+                screenshotAutoRefresh = null;
+            }
         }
 
         function refreshScreenshot() {
@@ -1849,6 +1886,7 @@
         }
 
         function closeScreenshot() {
+            stopScreenshotAutoRefresh();
             screenshotModal.classList.remove('show');
             resetTransform();
         }
