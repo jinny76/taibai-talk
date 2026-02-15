@@ -365,11 +365,22 @@ def mouse_click():
 
 @app.route('/screenshot')
 def screenshot():
-    """截取当前屏幕并返回 JPEG 图片"""
+    """截取当前屏幕并返回 JPEG 图片，带鼠标位置标记"""
     try:
+        from PIL import ImageDraw
         # 截取屏幕
         img = pyautogui.screenshot()
-        # 转换为 JPEG 格式（比 PNG 小很多，传输更快）
+        # 获取鼠标位置并绘制标记
+        mouse_x, mouse_y = pyautogui.position()
+        draw = ImageDraw.Draw(img)
+        # 绘制红色十字光标
+        size = 15
+        width = 3
+        draw.line([(mouse_x - size, mouse_y), (mouse_x + size, mouse_y)], fill='red', width=width)
+        draw.line([(mouse_x, mouse_y - size), (mouse_x, mouse_y + size)], fill='red', width=width)
+        # 绘制红色圆圈
+        draw.ellipse([(mouse_x - 8, mouse_y - 8), (mouse_x + 8, mouse_y + 8)], outline='red', width=2)
+        # 转换为 JPEG 格式
         buffer = io.BytesIO()
         img.save(buffer, format='JPEG', quality=75)
         buffer.seek(0)
