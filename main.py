@@ -230,26 +230,43 @@ def ensure_service_installed():
         return False
 
     # 检查版本
-    if check_service_version():
-        # 版本匹配，检查服务是否在运行
+    version_ok = check_service_version()
+
+    # 检查服务是否在运行（通过尝试连接管道）
+    service_running = False
+    if UNLOCK_SERVICE_AVAILABLE:
         try:
-            result = subprocess.run(
-                ['sc', 'query', SERVICE_NAME],
-                capture_output=True, text=True, timeout=5
-            )
-            if 'RUNNING' in result.stdout:
-                print("解锁服务已在运行")
-                return True
-            else:
-                # 服务已安装但未运行，启动它
-                subprocess.run(
-                    [os.path.join(get_service_dir(), 'TaiBaiService.exe'), '/start'],
-                    capture_output=True, timeout=10
-                )
-                print("解锁服务已启动")
-                return True
+            client = unlock_service_client.get_client()
+            status = client.get_status()
+            if status and status.get('result') == 0:
+                service_running = True
         except:
             pass
+
+    if version_ok and service_running:
+        print("解锁服务已在运行")
+        return True
+
+    if version_ok and not service_running:
+        # 版本匹配但服务未运行，尝试启动
+        print("正在启动解锁服务...")
+        try:
+            # 先尝试通过服务控制启动
+            result = subprocess.run(
+                [os.path.join(get_service_dir(), 'TaiBaiService.exe'), '/start'],
+                capture_output=True, text=True, timeout=10
+            )
+            if 'successfully' in result.stdout.lower() or result.returncode == 0:
+                time.sleep(1)
+                # 验证是否真的启动了
+                if UNLOCK_SERVICE_AVAILABLE:
+                    client = unlock_service_client.get_client()
+                    status = client.get_status()
+                    if status:
+                        print("解锁服务已启动")
+                        return True
+        except Exception as e:
+            print(f"启动服务失败: {e}")
 
     # 需要安装或更新服务
     if not is_admin():
