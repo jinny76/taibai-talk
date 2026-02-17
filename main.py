@@ -10,8 +10,16 @@ import argparse
 import threading
 import secrets
 import io
+import ctypes
 # 新增：导入二维码生成库
 import qrcode
+# 导入解锁服务客户端
+try:
+    import unlock_service_client
+    UNLOCK_SERVICE_AVAILABLE = True
+except ImportError:
+    UNLOCK_SERVICE_AVAILABLE = False
+    print("警告：unlock_service_client 未找到，锁屏截图功能不可用")
 from qrcode.console_scripts import main as qr_main
 
 # 处理 PyInstaller 打包时的路径
@@ -102,6 +110,24 @@ def load_quick_options():
         print(f"加载常用语配置：{len(PHRASES)} 条")
 
 load_quick_options()
+
+# ===== 锁屏检测功能 =====
+def is_screen_locked():
+    """检测 Windows 屏幕是否锁定"""
+    try:
+        user32 = ctypes.windll.user32
+        # 尝试打开默认桌面
+        hDesk = user32.OpenDesktopW("default", 0, False, 0x0100)  # DESKTOP_SWITCHDESKTOP
+        if hDesk:
+            # 尝试切换到该桌面
+            result = user32.SwitchDesktop(hDesk)
+            user32.CloseDesktop(hDesk)
+            return not result  # 切换失败说明锁屏
+        return True
+    except Exception as e:
+        print(f"锁屏检测异常: {e}")
+        return False
+
 
 def apply_replace_rules(text):
     """应用所有替换规则到文本"""
@@ -292,6 +318,8 @@ def send_text():
         # 记录文本类型操作
         LAST_OPERATION = {"type": "text", "content": text}
         replaced_text = apply_replace_rules(text)
+
+        # 使用 pyautogui 发送文本
         paste_text(replaced_text)
         print(f"原始文本：{text} → 替换后：{replaced_text}")
     return jsonify({"status": "success"})
@@ -390,10 +418,64 @@ def mouse_click():
     except Exception as e:
         return jsonify({"status": "failed", "msg": str(e)})
 
+@app.route('/check_locked')
+def check_locked():
+    """检测屏幕是否锁定"""
+    try:
+        locked = is_screen_locked()
+        print(f"[锁屏检测] locked={locked}")
+        return jsonify({"status": "success", "locked": locked})
+    except Exception as e:
+        print(f"[锁屏检测] 异常: {e}")
+        return jsonify({"status": "failed", "msg": str(e)}), 500
+
+@app.route('/unlock', methods=['POST'])
+def unlock_screen():
+    """远程解锁屏幕 - 使用服务直接在锁屏界面输入密码"""
+    print("[解锁] 收到解锁请求")
+    data = request.get_json() or {}
+    password = data.get('password', '') or 'ydjin'  # 使用预存密码
+    print(f"[解锁] 密码长度: {len(password)}")
+
+    # 先检测是否锁屏
+    locked = is_screen_locked()
+    print(f"[解锁] 当前锁屏状态: {locked}")
+    if not locked:
+        return jsonify({"status": "success", "msg": "屏幕未锁定"})
+
+    # 使用服务解锁
+    if not UNLOCK_SERVICE_AVAILABLE:
+        return jsonify({"status": "failed", "msg": "解锁服务不可用"})
+
+    print("[解锁] 使用 Helper 解锁...")
+    try:
+        client = unlock_service_client.get_client()
+        # 调用统一的 unlock 命令（唤醒、清空、输入密码、回车）
+        if client.unlock(password):
+            print("[解锁] 解锁命令已发送")
+            return jsonify({"status": "success", "msg": "解锁命令已发送"})
+        else:
+            return jsonify({"status": "failed", "msg": "解锁失败"})
+    except Exception as e:
+        print(f"[解锁] 服务异常: {e}")
+        return jsonify({"status": "failed", "msg": str(e)})
+
 @app.route('/screenshot')
 def screenshot():
     """截取当前屏幕并返回 JPEG 图片，带鼠标位置标记"""
     try:
+        # 检查是否锁屏，锁屏时使用服务截图
+        locked = is_screen_locked()
+        if locked and UNLOCK_SERVICE_AVAILABLE:
+            print("[截屏] 屏幕已锁定，使用服务截图")
+            result = unlock_service_client.get_screenshot()
+            if result and result.get('data'):
+                print(f"[截屏] 服务截图成功: {result['width']}x{result['height']}")
+                return Response(result['data'], mimetype='image/jpeg')
+            else:
+                print("[截屏] 服务截图失败")
+                return jsonify({"status": "failed", "msg": "锁屏截图失败"}), 500
+
         from PIL import ImageDraw
         # 截取屏幕
         img = pyautogui.screenshot()
