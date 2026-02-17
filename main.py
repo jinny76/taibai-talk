@@ -11,6 +11,10 @@ import threading
 import secrets
 import io
 import ctypes
+import subprocess
+import shutil
+import hashlib
+import getpass
 # 新增：导入二维码生成库
 import qrcode
 # 导入解锁服务客户端
@@ -21,6 +25,12 @@ except ImportError:
     UNLOCK_SERVICE_AVAILABLE = False
     print("警告：unlock_service_client 未找到，锁屏截图功能不可用")
 from qrcode.console_scripts import main as qr_main
+
+# ===== 版本号（打包时同步更新）=====
+VERSION = "1.0.0"
+
+# ===== 解锁密码（启动时输入，不存储）=====
+UNLOCK_PASSWORD = None
 
 # 处理 PyInstaller 打包时的路径
 if getattr(sys, 'frozen', False):
@@ -49,6 +59,229 @@ REPLACE_RULES = []
 # ===== 重构历史记录：存储上一次操作的类型和内容 =====
 # 格式: {"type": "text"/"enter"/"delete", "content": 文本内容/空字符串}
 LAST_OPERATION = {"type": None, "content": ""}
+
+# ===== 服务管理函数 =====
+SERVICE_NAME = "TaiBaiService"
+SERVICE_FILES = ["TaiBaiService.exe", "TaiBaiHelper.exe"]
+VERSION_FILE = "TaiBaiService.version"
+
+def is_admin():
+    """检测是否以管理员权限运行"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+def request_admin_and_restart():
+    """请求管理员权限并重启程序"""
+    if sys.platform != 'win32':
+        return False
+
+    try:
+        # 使用 ShellExecute 以管理员身份重新运行
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, " ".join(sys.argv), None, 1
+        )
+        sys.exit(0)
+    except Exception as e:
+        print(f"请求管理员权限失败: {e}")
+        return False
+
+def get_file_hash(filepath):
+    """计算文件的 MD5 哈希"""
+    if not os.path.exists(filepath):
+        return None
+    with open(filepath, 'rb') as f:
+        return hashlib.md5(f.read()).hexdigest()
+
+def get_service_dir():
+    """获取服务文件应该安装的目录"""
+    return os.path.join(os.environ.get('SystemRoot', 'C:\\Windows'), 'System32')
+
+def get_bundled_service_path():
+    """获取打包的服务文件路径"""
+    if getattr(sys, 'frozen', False):
+        # 打包后：服务文件在 _MEIPASS 目录下的 unlock-service 子目录
+        return os.path.join(sys._MEIPASS, 'unlock-service')
+    else:
+        # 开发环境：服务文件在 unlock-service/build/bin/Release
+        return os.path.join(BASE_PATH, 'unlock-service', 'build', 'bin', 'Release')
+
+def check_service_version():
+    """检查已安装的服务版本是否匹配当前版本"""
+    service_dir = get_service_dir()
+    bundled_dir = get_bundled_service_path()
+
+    # 检查打包的服务文件是否存在
+    if not os.path.exists(bundled_dir):
+        print(f"警告：服务文件目录不存在: {bundled_dir}")
+        return True  # 开发环境可能没有编译，跳过检查
+
+    for filename in SERVICE_FILES:
+        bundled_file = os.path.join(bundled_dir, filename)
+        installed_file = os.path.join(service_dir, filename)
+
+        if not os.path.exists(bundled_file):
+            print(f"警告：打包的服务文件不存在: {bundled_file}")
+            return True  # 跳过检查
+
+        if not os.path.exists(installed_file):
+            print(f"服务文件未安装: {filename}")
+            return False
+
+        # 比较文件哈希
+        bundled_hash = get_file_hash(bundled_file)
+        installed_hash = get_file_hash(installed_file)
+
+        if bundled_hash != installed_hash:
+            print(f"服务文件版本不匹配: {filename}")
+            return False
+
+    return True
+
+def stop_service():
+    """停止服务"""
+    try:
+        # 先尝试通过服务控制停止
+        subprocess.run(
+            [os.path.join(get_service_dir(), 'TaiBaiService.exe'), '/stop'],
+            capture_output=True, timeout=10
+        )
+    except:
+        pass
+
+    # 强制结束进程
+    try:
+        subprocess.run(['taskkill', '/F', '/IM', 'TaiBaiService.exe'],
+                      capture_output=True, timeout=5)
+        subprocess.run(['taskkill', '/F', '/IM', 'TaiBaiHelper.exe'],
+                      capture_output=True, timeout=5)
+    except:
+        pass
+
+    time.sleep(1)
+
+def install_service():
+    """安装/更新服务"""
+    service_dir = get_service_dir()
+    bundled_dir = get_bundled_service_path()
+
+    if not os.path.exists(bundled_dir):
+        print(f"错误：服务文件目录不存在: {bundled_dir}")
+        return False
+
+    print("正在安装解锁服务...")
+
+    # 停止现有服务
+    stop_service()
+
+    # 卸载旧服务（如果存在）
+    service_exe = os.path.join(service_dir, 'TaiBaiService.exe')
+    if os.path.exists(service_exe):
+        try:
+            subprocess.run([service_exe, '/uninstall'], capture_output=True, timeout=10)
+            time.sleep(1)
+        except:
+            pass
+
+    # 复制服务文件
+    for filename in SERVICE_FILES:
+        src = os.path.join(bundled_dir, filename)
+        dst = os.path.join(service_dir, filename)
+
+        if not os.path.exists(src):
+            print(f"错误：源文件不存在: {src}")
+            return False
+
+        try:
+            shutil.copy2(src, dst)
+            print(f"  已复制: {filename}")
+        except Exception as e:
+            print(f"错误：复制 {filename} 失败: {e}")
+            return False
+
+    # 安装服务
+    try:
+        result = subprocess.run(
+            [os.path.join(service_dir, 'TaiBaiService.exe'), '/install'],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            print(f"服务安装返回: {result.returncode}")
+    except Exception as e:
+        print(f"警告：服务安装命令执行异常: {e}")
+
+    # 启动服务
+    try:
+        result = subprocess.run(
+            [os.path.join(service_dir, 'TaiBaiService.exe'), '/start'],
+            capture_output=True, text=True, timeout=10
+        )
+        print("解锁服务已启动")
+    except Exception as e:
+        print(f"警告：服务启动异常: {e}")
+
+    return True
+
+def ensure_service_installed():
+    """确保服务已安装且版本正确"""
+    if sys.platform != 'win32':
+        print("解锁服务仅支持 Windows")
+        return False
+
+    # 检查版本
+    if check_service_version():
+        # 版本匹配，检查服务是否在运行
+        try:
+            result = subprocess.run(
+                ['sc', 'query', SERVICE_NAME],
+                capture_output=True, text=True, timeout=5
+            )
+            if 'RUNNING' in result.stdout:
+                print("解锁服务已在运行")
+                return True
+            else:
+                # 服务已安装但未运行，启动它
+                subprocess.run(
+                    [os.path.join(get_service_dir(), 'TaiBaiService.exe'), '/start'],
+                    capture_output=True, timeout=10
+                )
+                print("解锁服务已启动")
+                return True
+        except:
+            pass
+
+    # 需要安装或更新服务
+    if not is_admin():
+        print("\n需要管理员权限来安装解锁服务...")
+        print("程序将请求管理员权限并重启。\n")
+        input("按 Enter 继续...")
+        request_admin_and_restart()
+        return False
+
+    return install_service()
+
+def get_unlock_password_from_user():
+    """从控制台获取解锁密码"""
+    global UNLOCK_PASSWORD
+    print("\n" + "="*50)
+    print("解锁密码设置")
+    print("="*50)
+    print("此密码用于远程解锁电脑屏幕。")
+    print("密码不会被存储，每次启动都需要输入。")
+    print("如果不需要远程解锁功能，直接按 Enter 跳过。")
+    print("="*50)
+
+    try:
+        password = getpass.getpass("请输入 Windows 登录密码（输入时不显示）: ")
+        if password:
+            UNLOCK_PASSWORD = password
+            print("✓ 解锁密码已设置")
+        else:
+            print("- 跳过解锁密码设置，远程解锁功能不可用")
+    except Exception as e:
+        print(f"密码输入异常: {e}")
+        UNLOCK_PASSWORD = None
 
 def load_replace_rules():
     """加载 EXE 所在目录下的 hot-rule.txt 替换规则"""
@@ -433,8 +666,12 @@ def check_locked():
 def unlock_screen():
     """远程解锁屏幕 - 使用服务直接在锁屏界面输入密码"""
     print("[解锁] 收到解锁请求")
-    data = request.get_json() or {}
-    password = data.get('password', '') or 'ydjin'  # 使用预存密码
+
+    # 使用启动时设置的密码
+    if not UNLOCK_PASSWORD:
+        return jsonify({"status": "failed", "msg": "未设置解锁密码，请重启程序并设置密码"})
+
+    password = UNLOCK_PASSWORD
     print(f"[解锁] 密码长度: {len(password)}")
 
     # 先检测是否锁屏
@@ -593,10 +830,25 @@ if __name__ == '__main__':
     parser.add_argument('--password', type=str, default=None, help='访问密码 (不设置则无需验证)')
     parser.add_argument('--no-qrcode', action='store_true', help='不显示二维码')
     parser.add_argument('--keep-awake', type=int, default=0, metavar='SEC', help='防锁屏：每隔 N 秒微移鼠标 (0=禁用)')
+    parser.add_argument('--no-unlock', action='store_true', help='禁用解锁服务（跳过服务安装和密码输入）')
     args = parser.parse_args()
+
+    print(f"\n太白说 v{VERSION}")
+    print("="*50)
 
     # 设置密码
     AUTH_PASSWORD = args.password
+
+    # 安装/检查解锁服务（Windows only）
+    if sys.platform == 'win32' and not args.no_unlock:
+        if UNLOCK_SERVICE_AVAILABLE:
+            ensure_service_installed()
+            # 获取解锁密码
+            get_unlock_password_from_user()
+        else:
+            print("警告：解锁服务模块未加载，跳过服务安装")
+    elif args.no_unlock:
+        print("解锁服务：已禁用 (--no-unlock)")
 
     local_ip = get_local_ip()
     port = args.port

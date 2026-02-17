@@ -16,6 +16,9 @@ a = Analysis(
         ('icon.ico', '.'),
         # HTML 模板文件
         ('templates', 'templates'),
+        # 解锁服务文件（打包时需要先编译 unlock-service）
+        ('unlock-service/build/bin/Release/TaiBaiService.exe', 'unlock-service'),
+        ('unlock-service/build/bin/Release/TaiBaiHelper.exe', 'unlock-service'),
     ],
     hiddenimports=[
         # Flask 相关
@@ -59,6 +62,8 @@ a = Analysis(
         'win32api',
         'win32con',
         'colorama',
+        # 解锁服务客户端
+        'unlock_service_client',
     ],
     hookspath=[],
     hooksconfig={},
